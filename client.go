@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -15,8 +14,9 @@ const defaultBaseURL = "http://127.0.0.1:4590"
 
 // Client is a Go SDK client for the hawk daemon API.
 type Client struct {
-	baseURL    string
-	httpClient *http.Client
+	baseURL     string
+	httpClient  *http.Client
+	retryConfig *RetryConfig
 }
 
 // ClientOption configures the Client.
@@ -83,7 +83,7 @@ func (c *Client) ChatStream(ctx context.Context, req ChatRequest) (*StreamReader
 
 	if resp.StatusCode != http.StatusOK {
 		defer resp.Body.Close()
-		return nil, parseHTTPError(resp)
+		return nil, parseAPIError(resp)
 	}
 
 	return newStreamReader(resp), nil
@@ -132,7 +132,7 @@ func (c *Client) DeleteSession(ctx context.Context, id string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
-		return parseHTTPError(resp)
+		return parseAPIError(resp)
 	}
 	return nil
 }
@@ -158,14 +158,14 @@ func (c *Client) get(ctx context.Context, path string, params url.Values, out in
 	}
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.doWithRetry(ctx, req, nil)
 	if err != nil {
 		return fmt.Errorf("hawk-sdk: request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return parseHTTPError(resp)
+		return parseAPIError(resp)
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
@@ -187,14 +187,14 @@ func (c *Client) post(ctx context.Context, path string, body interface{}, out in
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.doWithRetry(ctx, req, data)
 	if err != nil {
 		return fmt.Errorf("hawk-sdk: request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return parseHTTPError(resp)
+		return parseAPIError(resp)
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
@@ -217,13 +217,3 @@ func paginationParams(opts *ListOptions) url.Values {
 	return params
 }
 
-func parseHTTPError(resp *http.Response) error {
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-
-	var errResp ErrorResponse
-	if json.Unmarshal(body, &errResp) == nil && errResp.Error != "" {
-		return fmt.Errorf("hawk-sdk: %s (status %d)", errResp.Error, resp.StatusCode)
-	}
-
-	return fmt.Errorf("hawk-sdk: unexpected status %d: %s", resp.StatusCode, string(body))
-}
