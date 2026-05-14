@@ -3,6 +3,7 @@ package hawksdk
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -199,8 +200,15 @@ func TestHTTPError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	if got := err.Error(); got != "hawk-sdk: session not found (status 404)" {
-		t.Errorf("error = %q, want 'hawk-sdk: session not found (status 404)'", got)
+	expected := "hawk-sdk: session not found [not_found] (status 404)"
+	if got := err.Error(); got != expected {
+		t.Errorf("error = %q, want %q", got, expected)
+	}
+
+	// Verify typed error via errors.As.
+	var notFound *NotFoundError
+	if !errors.As(err, &notFound) {
+		t.Error("expected error to be NotFoundError")
 	}
 }
 
