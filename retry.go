@@ -155,4 +155,3 @@ func (c *Client) doWithRetry(ctx context.Context, req *http.Request, body []byte
 	}
 	return nil, lastErr
 }
-

@@ -75,6 +75,7 @@ func (c *Client) ChatStream(ctx context.Context, req ChatRequest) (*StreamReader
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Accept", "text/event-stream")
+	httpReq.Header.Set("User-Agent", userAgent())
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
@@ -124,6 +125,7 @@ func (c *Client) DeleteSession(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("hawk-sdk: create request: %w", err)
 	}
+	req.Header.Set("User-Agent", userAgent())
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -157,6 +159,7 @@ func (c *Client) get(ctx context.Context, path string, params url.Values, out in
 		return fmt.Errorf("hawk-sdk: create request: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", userAgent())
 
 	resp, err := c.doWithRetry(ctx, req, nil)
 	if err != nil {
@@ -186,6 +189,7 @@ func (c *Client) post(ctx context.Context, path string, body interface{}, out in
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", userAgent())
 
 	resp, err := c.doWithRetry(ctx, req, data)
 	if err != nil {
@@ -216,4 +220,3 @@ func paginationParams(opts *ListOptions) url.Values {
 	}
 	return params
 }
-
