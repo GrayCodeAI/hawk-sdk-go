@@ -82,7 +82,7 @@ func (c *Client) ChatStream(ctx context.Context, req ChatRequest) (*StreamReader
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		return nil, parseAPIError(resp)
 	}
 
@@ -129,7 +129,7 @@ func (c *Client) DeleteSession(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("hawk-sdk: delete request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
 		return parseAPIError(resp)
@@ -162,7 +162,7 @@ func (c *Client) get(ctx context.Context, path string, params url.Values, out in
 	if err != nil {
 		return fmt.Errorf("hawk-sdk: request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return parseAPIError(resp)
@@ -191,7 +191,7 @@ func (c *Client) post(ctx context.Context, path string, body interface{}, out in
 	if err != nil {
 		return fmt.Errorf("hawk-sdk: request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return parseAPIError(resp)
