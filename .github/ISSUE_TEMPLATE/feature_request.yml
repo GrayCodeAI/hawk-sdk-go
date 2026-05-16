@@ -1,0 +1,70 @@
+name: Feature request
+description: Suggest an improvement or a new SDK capability.
+title: "feat: <one-line summary>"
+labels: ["enhancement", "triage"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing a feature. hawk-sdk-go is a thin Go client for
+        the local hawk daemon. Every feature is evaluated against whether it
+        serves **a single developer** running their own hawk daemon — i.e.
+        it improves ergonomics, lowers latency, or simplifies integration.
+
+        Before submitting:
+        - Search [existing issues](https://github.com/GrayCodeAI/hawk-sdk-go/issues) to avoid duplicates.
+        - For new daemon endpoints, the daemon side must land first.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of feature
+      description: What flavour of change is this?
+      options:
+        - "New Client method (wraps a daemon endpoint)"
+        - "Streaming / SSE handling"
+        - "Retry / backoff / resilience"
+        - "Typed errors / error categories"
+        - "Agent / Tool / Workflow orchestration"
+        - "Configuration (options / transport)"
+        - "Tooling / CI / docs"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe the user problem first. Solutions can come later.
+      placeholder: When I call <method>, I have to write boilerplate Y because the SDK doesn't expose X.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How would you like the SDK to behave? Snippet of API you'd want.
+      render: go
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: |
+        What did you try? What do other SDKs (openai-go, anthropic-sdk-go,
+        sashabaranov/go-openai, langchaingo) do? Why isn't that enough?
+
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Solo-developer fit
+      description: hawk-sdk-go avoids enterprise scope. Confirm this feature respects that.
+      options:
+        - label: Works with zero configuration (sensible defaults).
+        - label: Does not introduce a third-party network dependency.
+        - label: Does not break the wire-compatibility with existing daemon versions.
+        - label: Has an escape hatch (override via option, transport, or env).

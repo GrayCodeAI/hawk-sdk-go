@@ -21,7 +21,7 @@ func TestHealth(t *testing.T) {
 		}
 		json.NewEncoder(w).Encode(HealthResponse{
 			Status:    "ok",
-			Version:   "0.3.0",
+			Version:   "0.2.0",
 			Uptime:    "1h30m",
 			Sessions:  2,
 			StartedAt: "2024-01-01T00:00:00Z",

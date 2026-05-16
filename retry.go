@@ -140,7 +140,7 @@ func (c *Client) doWithRetry(ctx context.Context, req *http.Request, body []byte
 			}
 
 			// Drain body before retry to allow connection reuse.
-			resp.Body.Close()
+			_ = resp.Body.Close()
 
 			if sleepErr := sleepWithContext(ctx, backoff); sleepErr != nil {
 				return nil, sleepErr
@@ -155,4 +155,3 @@ func (c *Client) doWithRetry(ctx context.Context, req *http.Request, body []byte
 	}
 	return nil, lastErr
 }
-
