@@ -1,0 +1,19 @@
+# CODEOWNERS for hawk-sdk-go
+* @GrayCodeAI/maintainers
+
+# Public API surface — bump SDK version (VERSION file) when these change
+/client.go    @GrayCodeAI/sdk-team
+/agent.go     @GrayCodeAI/sdk-team
+/workflow.go  @GrayCodeAI/sdk-team
+/tools.go     @GrayCodeAI/sdk-team
+/types.go     @GrayCodeAI/sdk-team
+/errors.go    @GrayCodeAI/sdk-team
+/version.go   @GrayCodeAI/maintainers
+/VERSION      @GrayCodeAI/maintainers
+
+# CI / release
+/.github/     @GrayCodeAI/devops-team
+/Makefile     @GrayCodeAI/devops-team
+
+# Documentation
+*.md          @GrayCodeAI/docs-team
