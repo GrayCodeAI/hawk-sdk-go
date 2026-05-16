@@ -1,0 +1,28 @@
+# Test artifacts
+*.test
+*.out
+coverage.html
+coverage.txt
+
+# Build output
+bin/
+dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go build/mod caches
+.gocache/
+.gomodcache/
+
+# Go workspace (local-only)
+go.work
+go.work.sum
