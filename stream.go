@@ -43,12 +43,13 @@ func (sr *StreamReader) Next() (*StreamEvent, error) {
 			continue
 		}
 
-		if strings.HasPrefix(line, "event: ") {
+		switch {
+		case strings.HasPrefix(line, "event: "):
 			event.Event = strings.TrimPrefix(line, "event: ")
-		} else if strings.HasPrefix(line, "data: ") {
+		case strings.HasPrefix(line, "data: "):
 			event.Data = strings.TrimPrefix(line, "data: ")
 			hasData = true
-		} else if line == "data:" {
+		case line == "data:":
 			event.Data = ""
 			hasData = true
 		}
