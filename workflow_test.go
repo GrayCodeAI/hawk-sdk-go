@@ -23,7 +23,6 @@ func TestWorkflow_BasicSequence(t *testing.T) {
 			return fmt.Sprintf("result: %d", n), nil
 		}).
 		Build()
-
 	if err != nil {
 		t.Fatalf("Build() error: %v", err)
 	}
@@ -57,7 +56,6 @@ func TestWorkflow_StepRetry(t *testing.T) {
 			BackoffMultiplier: 2.0,
 		}).
 		Build()
-
 	if err != nil {
 		t.Fatalf("Build() error: %v", err)
 	}
@@ -86,7 +84,6 @@ func TestWorkflow_StepTimeout(t *testing.T) {
 		}).
 		WithTimeout(50 * time.Millisecond).
 		Build()
-
 	if err != nil {
 		t.Fatalf("Build() error: %v", err)
 	}
@@ -106,7 +103,6 @@ func TestWorkflow_ContextCancellation(t *testing.T) {
 			return "done", nil
 		}).
 		Build()
-
 	if err != nil {
 		t.Fatalf("Build() error: %v", err)
 	}
@@ -130,7 +126,6 @@ func TestWorkflow_StepFailure(t *testing.T) {
 			return nil, nil
 		}).
 		Build()
-
 	if err != nil {
 		t.Fatalf("Build() error: %v", err)
 	}
@@ -178,7 +173,6 @@ func TestWorkflow_DataPassingBetweenSteps(t *testing.T) {
 			return m["count"] * 2, nil
 		}).
 		Build()
-
 	if err != nil {
 		t.Fatalf("Build() error: %v", err)
 	}
