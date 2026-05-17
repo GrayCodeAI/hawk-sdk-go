@@ -5,6 +5,20 @@ All notable changes to `hawk-sdk-go` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0](https://github.com/GrayCodeAI/hawk-sdk-go/compare/v0.2.0...v0.3.0) (2026-05-17)
+
+
+### Features
+
+* add typed errors, retry, stream helpers, tools, workflow engine, and agent config ([d04480f](https://github.com/GrayCodeAI/hawk-sdk-go/commit/d04480fe7447b4d1590ff42d69ef3f0541c5a4e7))
+* **hawk-sdk-go:** production hardening ([#1](https://github.com/GrayCodeAI/hawk-sdk-go/issues/1)) ([5d3845c](https://github.com/GrayCodeAI/hawk-sdk-go/commit/5d3845c5c6f321be9f66381faa13abc486d8c4bb))
+* initial Go SDK for hawk daemon API ([66e1e1a](https://github.com/GrayCodeAI/hawk-sdk-go/commit/66e1e1a2a4a7f4994d339933f52677babba3d126))
+
+
+### Bug Fixes
+
+* align Go version to 1.26.3 ([0b22abe](https://github.com/GrayCodeAI/hawk-sdk-go/commit/0b22abe3687cdea90deb8b390b36ce36a200c6eb))
+
 ## [Unreleased]
 
 ### Added
