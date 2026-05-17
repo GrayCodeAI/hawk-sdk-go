@@ -21,7 +21,7 @@
         { "type": "chore",    "section": "Chores",        "hidden": true },
         { "type": "style",    "section": "Style",         "hidden": true }
       ],
-      "extra-files": [{"type":"version-txt","path":"VERSION"}]
+      "version-file": "VERSION"
     }
   }
 }
