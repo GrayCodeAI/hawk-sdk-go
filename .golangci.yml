@@ -14,6 +14,13 @@ linters:
     - whitespace
     - bodyclose
     - noctx
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gocritic
+          - noctx
 
 linters-settings:
   errcheck:
