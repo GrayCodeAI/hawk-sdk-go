@@ -17,6 +17,7 @@ type Client struct {
 	baseURL     string
 	httpClient  *http.Client
 	retryConfig *RetryConfig
+	apiKey      string
 }
 
 // ClientOption configures the Client.
@@ -30,6 +31,12 @@ func WithBaseURL(u string) ClientOption {
 // WithHTTPClient sets a custom http.Client.
 func WithHTTPClient(hc *http.Client) ClientOption {
 	return func(c *Client) { c.httpClient = hc }
+}
+
+// WithAPIKey sets an API key for authentication. The key is sent as
+// an Authorization: Bearer header on every request.
+func WithAPIKey(key string) ClientOption {
+	return func(c *Client) { c.apiKey = key }
 }
 
 // New creates a new hawk SDK client.
@@ -76,8 +83,9 @@ func (c *Client) ChatStream(ctx context.Context, req ChatRequest) (*StreamReader
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Accept", "text/event-stream")
 	httpReq.Header.Set("User-Agent", userAgent())
+	c.setAuth(httpReq)
 
-	resp, err := c.httpClient.Do(httpReq)
+	resp, err := c.doWithRetry(ctx, httpReq, body)
 	if err != nil {
 		return nil, fmt.Errorf("hawk-sdk: stream request: %w", err)
 	}
@@ -126,8 +134,9 @@ func (c *Client) DeleteSession(ctx context.Context, id string) error {
 		return fmt.Errorf("hawk-sdk: create request: %w", err)
 	}
 	req.Header.Set("User-Agent", userAgent())
+	c.setAuth(req)
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.doWithRetry(ctx, req, nil)
 	if err != nil {
 		return fmt.Errorf("hawk-sdk: delete request: %w", err)
 	}
@@ -148,6 +157,22 @@ func (c *Client) Stats(ctx context.Context) (*StatsResponse, error) {
 	return &resp, nil
 }
 
+// CreateSession creates a new session and returns its summary.
+func (c *Client) CreateSession(ctx context.Context, req CreateSessionRequest) (*SessionSummary, error) {
+	var resp SessionSummary
+	if err := c.post(ctx, "/v1/sessions", req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// setAuth sets the Authorization header if an API key is configured.
+func (c *Client) setAuth(req *http.Request) {
+	if c.apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	}
+}
+
 func (c *Client) get(ctx context.Context, path string, params url.Values, out interface{}) error {
 	u := c.baseURL + path
 	if params != nil {
@@ -160,6 +185,7 @@ func (c *Client) get(ctx context.Context, path string, params url.Values, out in
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", userAgent())
+	c.setAuth(req)
 
 	resp, err := c.doWithRetry(ctx, req, nil)
 	if err != nil {
@@ -190,6 +216,7 @@ func (c *Client) post(ctx context.Context, path string, body interface{}, out in
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", userAgent())
+	c.setAuth(req)
 
 	resp, err := c.doWithRetry(ctx, req, data)
 	if err != nil {
