@@ -15,12 +15,16 @@ linters:
     - bodyclose
     - noctx
   exclusions:
+    presets:
+      - comments
+      - std-error-handling
     rules:
       - path: _test\.go
         linters:
           - errcheck
           - gocritic
           - noctx
+          - bodyclose
 
 linters-settings:
   errcheck:
@@ -40,11 +44,3 @@ linters-settings:
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
-  exclude-dirs:
-    - vendor
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-        - gocritic
-        - noctx
