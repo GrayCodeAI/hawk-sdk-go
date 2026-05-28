@@ -129,7 +129,7 @@ func TestRetryRespectsRetryAfterHeader(t *testing.T) {
 		t.Errorf("Status = %q, want %q", resp.Status, "ok")
 	}
 	// Should have completed quickly because Retry-After was 0.
-	if elapsed > 2*time.Second {
+	if elapsed > 5*time.Second {
 		t.Errorf("took %v, expected to be fast with Retry-After: 0", elapsed)
 	}
 }

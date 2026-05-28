@@ -136,7 +136,7 @@ func (c *Client) doWithRetry(ctx context.Context, req *http.Request, body []byte
 			backoff := cfg.backoffDuration(attempt)
 			if resp.StatusCode == http.StatusTooManyRequests {
 				if raHeader := resp.Header.Get("Retry-After"); raHeader != "" {
-					if parsed := parseRetryAfter(raHeader); parsed > 0 {
+					if parsed := parseRetryAfter(raHeader); parsed >= 0 {
 						backoff = parsed
 					}
 				}
