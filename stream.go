@@ -21,8 +21,10 @@ type StreamEvent struct {
 }
 
 func newStreamReader(resp *http.Response) *StreamReader {
+	scanner := bufio.NewScanner(resp.Body)
+	scanner.Buffer(make([]byte, 0, 1024*1024), 1024*1024) // 1MB max line
 	return &StreamReader{
-		scanner: bufio.NewScanner(resp.Body),
+		scanner: scanner,
 		resp:    resp,
 	}
 }
@@ -47,10 +49,15 @@ func (sr *StreamReader) Next() (*StreamEvent, error) {
 		case strings.HasPrefix(line, "event: "):
 			event.Event = strings.TrimPrefix(line, "event: ")
 		case strings.HasPrefix(line, "data: "):
-			event.Data = strings.TrimPrefix(line, "data: ")
+			if event.Data != "" {
+				event.Data += "\n"
+			}
+			event.Data += strings.TrimPrefix(line, "data: ")
 			hasData = true
 		case line == "data:":
-			event.Data = ""
+			if event.Data != "" {
+				event.Data += "\n"
+			}
 			hasData = true
 		}
 	}

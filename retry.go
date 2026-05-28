@@ -29,7 +29,7 @@ type RetryConfig struct {
 }
 
 // DefaultRetryConfig returns the default retry configuration:
-// 3 retries, 1s initial backoff, 30s max, 2x multiplier, retry on 429/500/502/503.
+// 3 retries, 1s initial backoff, 30s max, 2x multiplier, retry on 429/500/502/503/504.
 func DefaultRetryConfig() RetryConfig {
 	return RetryConfig{
 		MaxRetries:        3,
@@ -41,6 +41,7 @@ func DefaultRetryConfig() RetryConfig {
 			http.StatusInternalServerError,
 			http.StatusBadGateway,
 			http.StatusServiceUnavailable,
+			http.StatusGatewayTimeout,
 		},
 	}
 }
@@ -135,7 +136,9 @@ func (c *Client) doWithRetry(ctx context.Context, req *http.Request, body []byte
 			backoff := cfg.backoffDuration(attempt)
 			if resp.StatusCode == http.StatusTooManyRequests {
 				if raHeader := resp.Header.Get("Retry-After"); raHeader != "" {
-					backoff = parseRetryAfter(raHeader)
+					if parsed := parseRetryAfter(raHeader); parsed > 0 {
+						backoff = parsed
+					}
 				}
 			}
 

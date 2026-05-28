@@ -1,17 +1,14 @@
 package hawksdk
 
-import "context"
+import (
+	"context"
+	"sync"
+)
 
 // AgentConfig holds the declarative configuration for an Agent.
 type AgentConfig struct {
-	// Name identifies this agent.
-	Name string
-
 	// Model specifies which LLM model to use.
 	Model string
-
-	// SystemPrompt is the system instruction prepended to conversations.
-	SystemPrompt string
 
 	// Tools are the tools available to this agent.
 	Tools []Tool
@@ -19,14 +16,12 @@ type AgentConfig struct {
 	// MaxRounds limits the tool execution loop iterations.
 	MaxRounds int
 
-	// Temperature controls randomness in the model's output (0.0-2.0).
-	Temperature *float64
-
-	// TopP controls nucleus sampling (0.0-1.0).
-	TopP *float64
-
 	// Memory is an optional configuration for agent memory/context management.
 	Memory *MemoryConfig
+
+	// NOTE: Name, SystemPrompt, Temperature, and TopP are not yet supported
+	// by the daemon's ChatRequest API. They will be added when the server
+	// exposes corresponding fields.
 }
 
 // MemoryConfig configures memory behavior for an agent.
@@ -47,6 +42,9 @@ type Agent struct {
 	client *Client
 	config AgentConfig
 
+	// mu protects sessionID from concurrent reads/writes.
+	mu sync.Mutex
+
 	// sessionID tracks the current session for continuity.
 	sessionID string
 }
@@ -66,6 +64,9 @@ func NewAgent(client *Client, config AgentConfig) *Agent {
 // Chat sends a message and returns the complete response.
 // If the agent has tools configured, it automatically uses ChatWithTools.
 func (a *Agent) Chat(ctx context.Context, message string) (*ChatResponse, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
 	req := a.buildRequest(message)
 
 	// If tools are configured, use the tool execution loop.
@@ -94,12 +95,16 @@ func (a *Agent) Chat(ctx context.Context, message string) (*ChatResponse, error)
 // Note: streaming with tools is not automatically looped; use Chat for
 // full tool loop support.
 func (a *Agent) ChatStream(ctx context.Context, message string) (*StreamReader, error) {
+	a.mu.Lock()
 	req := a.buildRequest(message)
+	a.mu.Unlock()
 	return a.client.ChatStream(ctx, req)
 }
 
 // SessionID returns the current session ID, if established.
 func (a *Agent) SessionID() string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	return a.sessionID
 }
 

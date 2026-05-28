@@ -1,7 +1,6 @@
 package hawksdk
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -73,8 +72,7 @@ func TestStreamReader_MultipleEvents(t *testing.T) {
 }
 
 func TestStreamReader_MultiLineData(t *testing.T) {
-	// SSE spec: multiple "data:" lines are joined, but our parser only takes
-	// the last one (no newline join). This tests the actual behavior.
+	// SSE spec: multiple "data:" lines in one event block are joined with newlines.
 	sr := newTestStreamReader("data: line1\ndata: line2\n\n")
 	defer sr.Close()
 
@@ -82,9 +80,37 @@ func TestStreamReader_MultiLineData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Next() error: %v", err)
 	}
-	// The parser overwrites; the last data line wins.
-	if ev.Data != "line2" {
-		t.Errorf("Data = %q, want %q", ev.Data, "line2")
+	if ev.Data != "line1\nline2" {
+		t.Errorf("Data = %q, want %q", ev.Data, "line1\nline2")
+	}
+}
+
+func TestStreamReader_MultiLineDataThreeLines(t *testing.T) {
+	// Three data lines in a single event block.
+	sr := newTestStreamReader("data: a\ndata: b\ndata: c\n\n")
+	defer sr.Close()
+
+	ev, err := sr.Next()
+	if err != nil {
+		t.Fatalf("Next() error: %v", err)
+	}
+	if ev.Data != "a\nb\nc" {
+		t.Errorf("Data = %q, want %q", ev.Data, "a\nb\nc")
+	}
+}
+
+func TestStreamReader_MultiLineDataWithEmpty(t *testing.T) {
+	// Mixed data: and data: (empty) lines in a single event block.
+	sr := newTestStreamReader("data: line1\ndata:\ndata: line3\n\n")
+	defer sr.Close()
+
+	ev, err := sr.Next()
+	if err != nil {
+		t.Fatalf("Next() error: %v", err)
+	}
+	// data: (empty) contributes an empty string segment, joined with newlines.
+	if ev.Data != "line1\n\nline3" {
+		t.Errorf("Data = %q, want %q", ev.Data, "line1\n\nline3")
 	}
 }
 
@@ -448,6 +474,3 @@ func TestToolCallDelta_Fields(t *testing.T) {
 		t.Errorf("Arguments = %q, want %q", td.Arguments, `{"q":"test"}`)
 	}
 }
-
-// Ensure bufio.Scanner is used (compile-time check).
-var _ *bufio.Scanner

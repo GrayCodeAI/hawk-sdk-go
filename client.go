@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
+	"time"
 )
 
 const defaultBaseURL = "http://127.0.0.1:4590"
@@ -25,7 +27,7 @@ type ClientOption func(*Client)
 
 // WithBaseURL sets the daemon base URL (default: http://127.0.0.1:4590).
 func WithBaseURL(u string) ClientOption {
-	return func(c *Client) { c.baseURL = u }
+	return func(c *Client) { c.baseURL = strings.TrimRight(u, "/") }
 }
 
 // WithHTTPClient sets a custom http.Client.
@@ -43,7 +45,7 @@ func WithAPIKey(key string) ClientOption {
 func New(opts ...ClientOption) *Client {
 	c := &Client{
 		baseURL:    defaultBaseURL,
-		httpClient: http.DefaultClient,
+		httpClient: &http.Client{Timeout: 30 * time.Second},
 	}
 	for _, opt := range opts {
 		opt(c)
