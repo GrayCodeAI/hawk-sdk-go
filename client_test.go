@@ -8,7 +8,9 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
+	"time"
 )
 
 func TestHealth(t *testing.T) {
@@ -228,6 +230,136 @@ func TestDeleteSession(t *testing.T) {
 	err := c.DeleteSession(context.Background(), "sess-456")
 	if err != nil {
 		t.Fatalf("DeleteSession() error: %v", err)
+	}
+}
+
+// TestNetworkFailure verifies that the client returns an error when the target
+// server is unreachable (no listener on the port). This covers the network
+// failure path that production code must handle gracefully.
+func TestNetworkFailure(t *testing.T) {
+	// Use a port that is very unlikely to have a listener.
+	c := New(WithBaseURL("http://127.0.0.1:1"), WithRetry(RetryConfig{
+		MaxRetries:        0, // no retries to keep the test fast
+		InitialBackoff:    1 * time.Millisecond,
+		MaxBackoff:        1 * time.Millisecond,
+		BackoffMultiplier: 1,
+	}))
+
+	_, err := c.Health(context.Background())
+	if err == nil {
+		t.Fatal("expected error for unreachable server, got nil")
+	}
+}
+
+// TestNetworkFailureAllMethods verifies that every HTTP method returns an
+// error (not a panic or hang) when the server is unreachable.
+func TestNetworkFailureAllMethods(t *testing.T) {
+	c := New(WithBaseURL("http://127.0.0.1:1"), WithRetry(RetryConfig{
+		MaxRetries:        0,
+		InitialBackoff:    1 * time.Millisecond,
+		MaxBackoff:        1 * time.Millisecond,
+		BackoffMultiplier: 1,
+	}))
+	ctx := context.Background()
+
+	// Each of these should return a non-nil error.
+	if _, err := c.Health(ctx); err == nil {
+		t.Error("Health: expected error, got nil")
+	}
+	if _, err := c.Chat(ctx, ChatRequest{Prompt: "hi"}); err == nil {
+		t.Error("Chat: expected error, got nil")
+	}
+	if _, err := c.Session(ctx, "s1"); err == nil {
+		t.Error("Session: expected error, got nil")
+	}
+	if _, err := c.Stats(ctx); err == nil {
+		t.Error("Stats: expected error, got nil")
+	}
+	if err := c.DeleteSession(ctx, "s1"); err == nil {
+		t.Error("DeleteSession: expected error, got nil")
+	}
+}
+
+// TestConcurrencyClient exercises the Client from multiple goroutines
+// simultaneously to verify thread safety of internal state (HTTP client,
+// base URL, auth headers, etc.).
+func TestConcurrencyClient(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(HealthResponse{Status: "ok"})
+	}))
+	defer srv.Close()
+
+	c := New(WithBaseURL(srv.URL))
+	const goroutines = 20
+
+	var wg sync.WaitGroup
+	errs := make(chan error, goroutines)
+
+	for i := 0; i < goroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			resp, err := c.Health(context.Background())
+			if err != nil {
+				errs <- err
+				return
+			}
+			if resp.Status != "ok" {
+				errs <- fmt.Errorf("unexpected status: %s", resp.Status)
+			}
+		}()
+	}
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		t.Errorf("concurrent Health() error: %v", err)
+	}
+}
+
+// TestConcurrencyAgent exercises the Agent from multiple goroutines
+// simultaneously to verify that sessionID updates and chat requests
+// are properly serialized.
+func TestConcurrencyAgent(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(ChatResponse{
+			SessionID: "shared-sess",
+			Response:  "ok",
+		})
+	}))
+	defer srv.Close()
+
+	c := New(WithBaseURL(srv.URL))
+	agent := NewAgent(c, AgentConfig{Model: "test"})
+	const goroutines = 20
+
+	var wg sync.WaitGroup
+	errs := make(chan error, goroutines)
+
+	for i := 0; i < goroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			resp, err := agent.Chat(context.Background(), "hello")
+			if err != nil {
+				errs <- err
+				return
+			}
+			if resp.Response != "ok" {
+				errs <- fmt.Errorf("unexpected response: %s", resp.Response)
+			}
+		}()
+	}
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		t.Errorf("concurrent Chat() error: %v", err)
+	}
+
+	// SessionID should be consistent after all goroutines finish.
+	if got := agent.SessionID(); got != "shared-sess" {
+		t.Errorf("SessionID = %q, want %q", got, "shared-sess")
 	}
 }
 
