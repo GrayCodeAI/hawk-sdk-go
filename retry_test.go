@@ -172,8 +172,8 @@ func TestDefaultRetryConfig(t *testing.T) {
 	if cfg.BackoffMultiplier != 2.0 {
 		t.Errorf("BackoffMultiplier = %v, want 2.0", cfg.BackoffMultiplier)
 	}
-	if len(cfg.RetryableStatuses) != 4 {
-		t.Errorf("RetryableStatuses length = %d, want 4", len(cfg.RetryableStatuses))
+	if len(cfg.RetryableStatuses) != 5 {
+		t.Errorf("RetryableStatuses length = %d, want 5", len(cfg.RetryableStatuses))
 	}
 }
 
