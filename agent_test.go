@@ -29,10 +29,8 @@ func TestAgent_Chat(t *testing.T) {
 
 	c := New(WithBaseURL(srv.URL))
 	agent := NewAgent(c, AgentConfig{
-		Name:         "test-agent",
-		Model:        "claude-opus-4-6",
-		SystemPrompt: "You are a helpful assistant.",
-		MaxRounds:    5,
+		Model:     "claude-opus-4-6",
+		MaxRounds: 5,
 	})
 
 	resp, err := agent.Chat(context.Background(), "hello")
@@ -73,7 +71,6 @@ func TestAgent_ChatWithTools(t *testing.T) {
 
 	c := New(WithBaseURL(srv.URL))
 	agent := NewAgent(c, AgentConfig{
-		Name:  "tool-agent",
 		Model: "claude-opus-4-6",
 		Tools: []Tool{
 			{
@@ -121,7 +118,7 @@ func TestAgent_SessionContinuity(t *testing.T) {
 	defer srv.Close()
 
 	c := New(WithBaseURL(srv.URL))
-	agent := NewAgent(c, AgentConfig{Name: "continuity", Model: "test"})
+	agent := NewAgent(c, AgentConfig{Model: "test"})
 
 	// First call establishes session.
 	_, err := agent.Chat(context.Background(), "first")
@@ -154,7 +151,6 @@ func TestAgent_MemorySessionID(t *testing.T) {
 
 	c := New(WithBaseURL(srv.URL))
 	agent := NewAgent(c, AgentConfig{
-		Name:  "memory-agent",
 		Model: "test",
 		Memory: &MemoryConfig{
 			Enabled:   true,
@@ -184,7 +180,7 @@ func TestAgent_ChatStream(t *testing.T) {
 	defer srv.Close()
 
 	c := New(WithBaseURL(srv.URL))
-	agent := NewAgent(c, AgentConfig{Name: "stream-agent", Model: "test"})
+	agent := NewAgent(c, AgentConfig{Model: "test"})
 
 	stream, err := agent.ChatStream(context.Background(), "hello")
 	if err != nil {
@@ -203,9 +199,7 @@ func TestAgent_ChatStream(t *testing.T) {
 
 func TestNewAgent_Defaults(t *testing.T) {
 	c := New()
-	agent := NewAgent(c, AgentConfig{
-		Name: "defaults",
-	})
+	agent := NewAgent(c, AgentConfig{})
 
 	if agent.SessionID() != "" {
 		t.Errorf("SessionID should be empty initially, got %q", agent.SessionID())

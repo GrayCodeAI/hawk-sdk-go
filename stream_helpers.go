@@ -3,6 +3,7 @@ package hawksdk
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"strings"
 )
@@ -53,6 +54,7 @@ type ToolCallDelta struct {
 // It blocks until the stream ends or the context is cancelled.
 func (sr *StreamReader) CollectText(ctx context.Context) (string, error) {
 	var sb strings.Builder
+	var firstErr error
 
 	for {
 		select {
@@ -63,14 +65,20 @@ func (sr *StreamReader) CollectText(ctx context.Context) (string, error) {
 
 		ev, err := sr.Next()
 		if err == io.EOF {
-			return sb.String(), nil
+			return sb.String(), firstErr
 		}
 		if err != nil {
 			return sb.String(), err
 		}
 
-		// Skip non-data events and completion events.
-		if ev.Event == "done" || ev.Event == "error" {
+		// Skip done events but capture the first error.
+		if ev.Event == "done" {
+			continue
+		}
+		if ev.Event == "error" {
+			if firstErr == nil {
+				firstErr = fmt.Errorf("stream error: %s", ev.Data)
+			}
 			continue
 		}
 

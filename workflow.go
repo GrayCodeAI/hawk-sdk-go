@@ -113,6 +113,9 @@ func NewWorkflow() *WorkflowBuilder {
 
 // Step adds a named step to the workflow.
 func (wb *WorkflowBuilder) Step(name string, fn StepFunc) *WorkflowBuilder {
+	if wb.err != nil {
+		return wb
+	}
 	wb.steps = append(wb.steps, Step{
 		Name: name,
 		Fn:   fn,
