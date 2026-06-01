@@ -3,7 +3,9 @@ FROM golang:1.26.3-alpine AS builder
 RUN apk add --no-cache git ca-certificates
 
 WORKDIR /build
-COPY go.mod go.sum ./
+COPY go.mod ./
+# go.sum only exists if there are external dependencies
+COPY go.sum* ./
 RUN go mod download && go mod verify
 
 COPY . .
