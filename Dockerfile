@@ -1,6 +1,6 @@
 FROM golang:1.26.3-alpine AS builder
 
-RUN apk add --no-cache git ca-certificates
+RUN apk add --no-cache git ca-certificates tzdata
 
 WORKDIR /build
 COPY go.mod ./
