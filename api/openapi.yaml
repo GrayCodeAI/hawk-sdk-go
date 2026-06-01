@@ -1,0 +1,45 @@
+openapi: "3.1.0"
+info:
+  title: hawk-sdk-go — Go SDK API Reference
+  description: |
+    Go SDK for the hawk daemon HTTP API. Dependency-free client for chat,
+    streaming, sessions, messages, and stats.
+
+    This is a client SDK — it connects to the hawk daemon at http://localhost:4590.
+    See hawk's api/openapi.yaml for the server-side contract.
+  version: "0.1.0"
+  license:
+    name: MIT
+    url: https://github.com/GrayCodeAI/hawk-sdk-go/blob/main/LICENSE
+  contact:
+    url: https://github.com/GrayCodeAI/hawk-sdk-go
+
+servers:
+  - url: http://localhost:4590
+    description: Hawk daemon (managed by hawk, not this SDK)
+
+x-sdk-api:
+  package: hawksdk
+  constructor:
+    description: Create a new SDK client
+    go_signature: "func New(opts ...ClientOption) *Client"
+    options:
+      - WithBaseURL(url string)
+      - WithAPIKey(key string)
+      - WithHTTPClient(client *http.Client)
+      - WithRetry(cfg RetryConfig)
+  methods:
+    - name: Health
+      signature: "func (c *Client) Health(ctx context.Context) (*HealthResponse, error)"
+    - name: Chat
+      signature: "func (c *Client) Chat(ctx context.Context, req ChatRequest) (*ChatResponse, error)"
+    - name: ChatStream
+      signature: "func (c *Client) ChatStream(ctx context.Context, req ChatRequest) (*StreamReader, error)"
+    - name: Sessions
+      signature: "func (c *Client) Sessions(ctx context.Context, opts ListOptions) (*PaginatedResponse[Session], error)"
+    - name: Messages
+      signature: "func (c *Client) Messages(ctx context.Context, sessionID string, opts ListOptions) (*PaginatedResponse[Message], error)"
+    - name: DeleteSession
+      signature: "func (c *Client) DeleteSession(ctx context.Context, sessionID string) error"
+    - name: Stats
+      signature: "func (c *Client) Stats(ctx context.Context) (*StatsResponse, error)"

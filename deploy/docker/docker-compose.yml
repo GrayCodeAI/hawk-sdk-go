@@ -1,0 +1,11 @@
+name: hawk-sdk-go
+
+services:
+  hawk-sdk-go:
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+    image: ghcr.io/graycodeai/hawk-sdk-go:dev
+    env_file:
+      - path: ../../.env.example
+        required: false
