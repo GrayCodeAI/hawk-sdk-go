@@ -20,7 +20,7 @@ func main() {
 
 	// Chat
 	resp, err := client.Chat(context.Background(), hawksdk.ChatRequest{
-		Message: "Explain what a closure is in Go",
+		Prompt: "Explain what a closure is in Go",
 	})
 	if err != nil {
 		log.Fatal(err)
