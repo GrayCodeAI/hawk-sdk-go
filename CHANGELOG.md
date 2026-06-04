@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **`const Version = "0.2.0"`** in `version.go`, exposed as the package-level
+- **`const Version = "0.1.0"`** in `version.go`, exposed as the package-level
   source of truth for the SDK version. Aligns hawk-sdk-go with the rest of
   the hawk-eco ecosystem (`hawk`, `tok`, `eyrie`, `yaad`, `trace`, `sight`,
   `inspect`).
@@ -44,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `gofmt -w` on `client.go` and `retry.go` to remove pre-existing
   trailing-blank-line drift in files I touched.
 - Test fixture in `client_test.go` updated to mock daemon version
-  `"0.2.0"` (was `"0.3.0"`) for ecosystem consistency. The test does
+  `"0.1.0"` (was `"0.3.0"`) for ecosystem consistency. The test does
   not assert on this value; the change is cosmetic.
 
 ### Production-hardening pass already on this branch (commit `1028420`)
