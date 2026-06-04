@@ -64,7 +64,7 @@ body:
     attributes:
       label: hawk-sdk-go version
       description: Output of `hawksdk.Version` or the git SHA you built from.
-      placeholder: "0.2.0"
+      placeholder: "0.1.0"
     validations:
       required: true
 
@@ -73,7 +73,7 @@ body:
     attributes:
       label: hawk daemon version
       description: Output of `hawk version` (the daemon you're hitting).
-      placeholder: "0.2.0"
+      placeholder: "0.1.0"
     validations:
       required: true
 
