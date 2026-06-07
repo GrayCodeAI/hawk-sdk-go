@@ -60,6 +60,10 @@ See the [examples/](examples/) directory for complete runnable examples.
 - `Sessions(ctx)` - List active sessions
 - `Session(ctx, id)` - Get session details
 
+## Contributing
+
+Contributions are welcome — please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+
 ## License
 
 MIT - see [LICENSE](LICENSE) for details.
