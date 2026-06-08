@@ -9,6 +9,7 @@ bin/
 dist/
 # Stray example binaries (e.g. `go build` run inside examples/* leaving the binary at repo root)
 /basic
+/examples/basic/basic
 /examples/*/main
 examples/**/*.bin
 

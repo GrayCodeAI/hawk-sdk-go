@@ -30,8 +30,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `.github/workflows/ci.yml` — race tests + coverage upload + lint
     (golangci-lint v2) + multi-platform build matrix
     (linux/darwin/windows × amd64/arm64) + govulncheck.
-  - `.github/dependabot.yml` — weekly `gomod` + `github-actions`
-    updates.
   - `.github/PULL_REQUEST_TEMPLATE.md` — Summary / Changes / API impact
     / Daemon compatibility / Testing / Checklist.
   - `.github/ISSUE_TEMPLATE/bug_report.yml` — structured bug report.

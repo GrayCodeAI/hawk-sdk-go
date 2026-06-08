@@ -14,6 +14,23 @@ linters:
     - whitespace
     - bodyclose
     - noctx
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: false
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+      disabled-checks:
+        - hugeParam
+        - rangeValCopy
+        - appendAssign
+        # appendCombine hurts readability when each appended item is a
+        # documented struct literal.
+        - appendCombine
+    staticcheck:
+      checks: ["all", "-SA1019"]
   exclusions:
     presets:
       - comments
@@ -25,21 +42,6 @@ linters:
           - gocritic
           - noctx
           - bodyclose
-
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: false
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - performance
-    disabled-checks:
-      - hugeParam
-      - rangeValCopy
-      - appendAssign
-  staticcheck:
-    checks: ["all", "-SA1019"]
 
 issues:
   max-issues-per-linter: 0
