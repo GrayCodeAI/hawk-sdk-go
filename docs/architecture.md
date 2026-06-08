@@ -57,7 +57,7 @@ resp, err := c.Chat(ctx, hawksdk.ChatRequest{Message: "list files"})
 // 📡 Streaming chat
 stream, err := c.ChatStream(ctx, hawksdk.ChatRequest{Message: "explain this code"})
 defer stream.Close()
-for stream.Next() { fmt.Print(stream.Event().Data) }
+for { ev, err := stream.Next(); if err != nil { break }; fmt.Print(ev.Data) }
 
 // 📋 Sessions
 sessions, _ := c.Sessions(ctx, hawksdk.ListOptions{Limit: 10})
