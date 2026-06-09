@@ -4,7 +4,7 @@
     <strong>Official Go client for the Hawk daemon API</strong>
   </p>
   <p align="center">
-    <a href="https://golang.org/"><img src="https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go"></a>
+    <a href="https://golang.org/"><img src="https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License"></a>
     <a href="https://github.com/GrayCodeAI/hawk-sdk-go/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/GrayCodeAI/hawk-sdk-go/ci.yml?style=flat-square&label=tests" alt="CI"></a>
   </p>

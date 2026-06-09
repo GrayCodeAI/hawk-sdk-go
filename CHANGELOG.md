@@ -7,11 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] — 2026-06-08
+
 ### Added
-- **`const Version = "0.1.0"`** in `version.go`, exposed as the package-level
-  source of truth for the SDK version. Aligns hawk-sdk-go with the rest of
-  the hawk-eco ecosystem (`hawk`, `tok`, `eyrie`, `yaad`, `trace`, `sight`,
-  `inspect`).
+- **`var Version`** in `version.go`, exposed as the package-level source of
+  truth for the SDK version (read from the `VERSION` file via `go:embed`).
+  Aligns hawk-sdk-go with the rest of the hawk-eco ecosystem (`hawk`, `tok`,
+  `eyrie`, `yaad`, `trace`, `sight`, `inspect`).
 - **`User-Agent: hawk-sdk-go/<Version>` header** on every outbound HTTP
   request — `Health`, `Chat`, `ChatStream`, `Sessions`, `Session`,
   `Messages`, `DeleteSession`, `Stats`. Lets daemon operators identify
