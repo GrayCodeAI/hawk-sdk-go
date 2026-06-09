@@ -49,7 +49,7 @@ jobs:
           cache: true
       - name: gofumpt diff
         run: |
-          go install mvdan.cc/gofumpt@latest
+          go install mvdan.cc/gofumpt@v0.10.0
           out=$(gofumpt -l .)
           if [ -n "$out" ]; then
             echo "::error::gofumpt would reformat the following files:"
@@ -131,12 +131,12 @@ jobs:
           cache: true
       - name: govulncheck
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
+          go install golang.org/x/vuln/cmd/govulncheck@v1.3.0
           govulncheck ./...
       - name: gosec (advisory)
         continue-on-error: true
         run: |
-          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          go install github.com/securego/gosec/v2/cmd/gosec@v2.27.1
           gosec -exclude=G104,G301,G302,G304,G306 ./...
 
   # -------------------------------------------------------------------------
@@ -157,7 +157,7 @@ jobs:
         run: rm -f go.work go.work.sum
       - name: deadcode
         run: |
-          go install golang.org/x/tools/cmd/deadcode@latest
+          go install golang.org/x/tools/cmd/deadcode@v0.45.0
           deadcode ./... 2>&1 | head -50
 
   # -------------------------------------------------------------------------
