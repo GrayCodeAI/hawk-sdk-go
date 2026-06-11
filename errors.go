@@ -35,9 +35,6 @@ type BadRequestError struct {
 	APIError
 }
 
-// Error implements the error interface.
-func (e *BadRequestError) Error() string { return e.APIError.Error() }
-
 // Unwrap allows errors.Is/As to match the underlying APIError.
 func (e *BadRequestError) Unwrap() error { return &e.APIError }
 
@@ -45,9 +42,6 @@ func (e *BadRequestError) Unwrap() error { return &e.APIError }
 type AuthenticationError struct {
 	APIError
 }
-
-// Error implements the error interface.
-func (e *AuthenticationError) Error() string { return e.APIError.Error() }
 
 // Unwrap allows errors.Is/As to match the underlying APIError.
 func (e *AuthenticationError) Unwrap() error { return &e.APIError }
@@ -57,9 +51,6 @@ type ForbiddenError struct {
 	APIError
 }
 
-// Error implements the error interface.
-func (e *ForbiddenError) Error() string { return e.APIError.Error() }
-
 // Unwrap allows errors.Is/As to match the underlying APIError.
 func (e *ForbiddenError) Unwrap() error { return &e.APIError }
 
@@ -67,9 +58,6 @@ func (e *ForbiddenError) Unwrap() error { return &e.APIError }
 type NotFoundError struct {
 	APIError
 }
-
-// Error implements the error interface.
-func (e *NotFoundError) Error() string { return e.APIError.Error() }
 
 // Unwrap allows errors.Is/As to match the underlying APIError.
 func (e *NotFoundError) Unwrap() error { return &e.APIError }
@@ -98,9 +86,6 @@ type InternalServerError struct {
 	APIError
 }
 
-// Error implements the error interface.
-func (e *InternalServerError) Error() string { return e.APIError.Error() }
-
 // Unwrap allows errors.Is/As to match the underlying APIError.
 func (e *InternalServerError) Unwrap() error { return &e.APIError }
 
@@ -108,9 +93,6 @@ func (e *InternalServerError) Unwrap() error { return &e.APIError }
 type ServiceUnavailableError struct {
 	APIError
 }
-
-// Error implements the error interface.
-func (e *ServiceUnavailableError) Error() string { return e.APIError.Error() }
 
 // Unwrap allows errors.Is/As to match the underlying APIError.
 func (e *ServiceUnavailableError) Unwrap() error { return &e.APIError }
