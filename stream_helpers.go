@@ -52,6 +52,12 @@ type ToolCallDelta struct {
 
 // CollectText consumes the entire stream and returns the concatenated text content.
 // It blocks until the stream ends or the context is cancelled.
+//
+// When the returned error is non-nil, the returned string may be a partial
+// result: it contains all text collected up to the point the error occurred,
+// which callers may use or discard as appropriate. The error returned is the
+// first error encountered while consuming the stream — if the stream emitted
+// an "error" event before a later read failure, the "error" event wins.
 func (sr *StreamReader) CollectText(ctx context.Context) (string, error) {
 	var sb strings.Builder
 	var firstErr error
@@ -59,6 +65,9 @@ func (sr *StreamReader) CollectText(ctx context.Context) (string, error) {
 	for {
 		select {
 		case <-ctx.Done():
+			if firstErr != nil {
+				return sb.String(), firstErr
+			}
 			return sb.String(), ctx.Err()
 		default:
 		}
@@ -68,6 +77,11 @@ func (sr *StreamReader) CollectText(ctx context.Context) (string, error) {
 			return sb.String(), firstErr
 		}
 		if err != nil {
+			// Preserve first-error semantics: an "error" event seen earlier
+			// takes precedence over a subsequent read failure.
+			if firstErr != nil {
+				return sb.String(), firstErr
+			}
 			return sb.String(), err
 		}
 

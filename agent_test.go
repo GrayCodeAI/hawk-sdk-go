@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"sync/atomic"
 	"testing"
 )
@@ -194,6 +195,67 @@ func TestAgent_ChatStream(t *testing.T) {
 	}
 	if ev.Data != "streaming" {
 		t.Errorf("Data = %q, want %q", ev.Data, "streaming")
+	}
+}
+
+// TestAgent_ConcurrentChatAndStream runs Chat and ChatStream concurrently
+// (run with -race) to verify that ChatStream's session ID snapshot is not
+// affected by concurrent Chat calls mutating a.sessionID, and that no data
+// race exists between request building and session updates.
+func TestAgent_ConcurrentChatAndStream(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Accept") == "text/event-stream" {
+			w.Header().Set("Content-Type", "text/event-stream")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("data: chunk\n\n"))
+			w.Write([]byte("event: done\ndata: {}\n\n"))
+			return
+		}
+		json.NewEncoder(w).Encode(ChatResponse{
+			SessionID: "race-sess",
+			Response:  "ok",
+		})
+	}))
+	defer srv.Close()
+
+	c := New(WithBaseURL(srv.URL))
+	agent := NewAgent(c, AgentConfig{Model: "test"})
+
+	const iterations = 10
+	var wg sync.WaitGroup
+	errs := make(chan error, iterations*2)
+
+	for i := 0; i < iterations; i++ {
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			if _, err := agent.Chat(context.Background(), "hello"); err != nil {
+				errs <- err
+			}
+		}()
+		go func() {
+			defer wg.Done()
+			stream, err := agent.ChatStream(context.Background(), "stream hello")
+			if err != nil {
+				errs <- err
+				return
+			}
+			defer stream.Close()
+			// Consume the whole stream while Chat calls mutate sessionID.
+			if _, err := stream.CollectText(context.Background()); err != nil {
+				errs <- err
+			}
+		}()
+	}
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		t.Errorf("concurrent Chat/ChatStream error: %v", err)
+	}
+
+	if got := agent.SessionID(); got != "race-sess" {
+		t.Errorf("SessionID = %q, want %q", got, "race-sess")
 	}
 }
 
