@@ -52,16 +52,16 @@ c := hawksdk.New(
 health, err := c.Health(ctx)
 
 // 💬 Non-streaming chat
-resp, err := c.Chat(ctx, hawksdk.ChatRequest{Message: "list files"})
+resp, err := c.Chat(ctx, hawksdk.ChatRequest{Prompt: "list files"})
 
 // 📡 Streaming chat
-stream, err := c.ChatStream(ctx, hawksdk.ChatRequest{Message: "explain this code"})
+stream, err := c.ChatStream(ctx, hawksdk.ChatRequest{Prompt: "explain this code"})
 defer stream.Close()
 for { ev, err := stream.Next(); if err != nil { break }; fmt.Print(ev.Data) }
 
 // 📋 Sessions
-sessions, _ := c.Sessions(ctx, hawksdk.ListOptions{Limit: 10})
-msgs, _     := c.Messages(ctx, sessionID, hawksdk.ListOptions{})
+sessions, _ := c.Sessions(ctx, &hawksdk.ListOptions{Limit: 10})
+msgs, _     := c.Messages(ctx, sessionID, nil)
 _            = c.DeleteSession(ctx, sessionID)
 
 // 📊 Stats
@@ -73,7 +73,7 @@ stats, _ := c.Stats(ctx)
 ## 🤖 Agent (Higher-Level)
 
 ```go
-agent := hawksdk.NewAgent(c, hawksdk.AgentConfig{SystemPrompt: "You are a Go expert"})
+agent := hawksdk.NewAgent(c, hawksdk.AgentConfig{Model: "claude-sonnet-4-5", MaxRounds: 5})
 resp, _ := agent.Chat(ctx, "refactor this function")
 // Subsequent calls automatically continue the same session
 ```

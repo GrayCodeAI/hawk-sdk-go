@@ -38,6 +38,13 @@ type MemoryConfig struct {
 
 // Agent wraps a Client with declarative configuration, providing a
 // simplified interface for conversational AI interactions.
+//
+// Concurrency: Agent is safe for concurrent use. The session ID is read and
+// updated under an internal mutex. Each Chat or ChatStream call captures the
+// session ID at the moment the request is built; a stream returned by
+// ChatStream continues to use the session ID captured at call time even if a
+// concurrent Chat call establishes a new session while the stream is being
+// consumed.
 type Agent struct {
 	client *Client
 	config AgentConfig
@@ -94,7 +101,15 @@ func (a *Agent) Chat(ctx context.Context, message string) (*ChatResponse, error)
 // ChatStream sends a message and returns a streaming response reader.
 // Note: streaming with tools is not automatically looped; use Chat for
 // full tool loop support.
+//
+// The session ID is captured under the agent's lock when the request is
+// built, so the entire stream lifecycle uses that snapshot: a concurrent
+// Chat call that mutates the agent's session ID does not affect an
+// in-flight stream.
 func (a *Agent) ChatStream(ctx context.Context, message string) (*StreamReader, error) {
+	// Capture the session ID into the request under the lock. req holds the
+	// captured value by copy, so the stream is immune to later mutations of
+	// a.sessionID by concurrent Chat calls.
 	a.mu.Lock()
 	req := a.buildRequest(message)
 	a.mu.Unlock()

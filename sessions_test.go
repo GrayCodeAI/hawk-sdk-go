@@ -336,6 +336,29 @@ func TestCreateSession(t *testing.T) {
 	}
 }
 
+// TestCreateSession201 verifies that post() accepts any 2xx status, not
+// just 200 OK — creation endpoints commonly return 201 Created.
+func TestCreateSession201(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(SessionSummary{
+			ID:  "created-sess",
+			CWD: "/tmp",
+		})
+	}))
+	defer srv.Close()
+
+	c := New(WithBaseURL(srv.URL))
+	resp, err := c.CreateSession(context.Background(), CreateSessionRequest{Name: "n"})
+	if err != nil {
+		t.Fatalf("CreateSession() with 201 response error: %v", err)
+	}
+	if resp.ID != "created-sess" {
+		t.Errorf("ID = %q, want %q", resp.ID, "created-sess")
+	}
+}
+
 func TestCreateSessionEmptyBody(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req CreateSessionRequest

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 )
@@ -139,6 +140,131 @@ func TestWorkflow_StepFailure(t *testing.T) {
 		if got := err.Error(); got == "" {
 			t.Error("error message should not be empty")
 		}
+	}
+}
+
+// TestWorkflow_RetryBackoffContextCancelled verifies that cancelling the
+// context while a step is sleeping between retries aborts the retry loop
+// and returns the last step error (not a hang or a nil error).
+func TestWorkflow_RetryBackoffContextCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	attempts := 0
+
+	wf, err := NewWorkflow().
+		Step("always-fails", func(ctx context.Context, input any) (any, error) {
+			attempts++
+			if attempts == 1 {
+				// Cancel during the backoff that follows this failure.
+				go func() {
+					time.Sleep(20 * time.Millisecond)
+					cancel()
+				}()
+			}
+			return nil, errors.New("persistent failure")
+		}).
+		WithRetry(RetryConfig{
+			MaxRetries:        10,
+			InitialBackoff:    10 * time.Second, // long enough that cancel wins
+			MaxBackoff:        10 * time.Second,
+			BackoffMultiplier: 1.0,
+		}).
+		Build()
+	if err != nil {
+		t.Fatalf("Build() error: %v", err)
+	}
+
+	start := time.Now()
+	_, err = wf.Run(ctx, nil)
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected error after cancellation during backoff")
+	}
+	// The retry loop returns lastErr when the backoff sleep is interrupted.
+	if !strings.Contains(err.Error(), "persistent failure") {
+		t.Errorf("error = %v, want it to wrap the step error", err)
+	}
+	if attempts != 1 {
+		t.Errorf("attempts = %d, want 1 (cancel should stop retries)", attempts)
+	}
+	if elapsed > 5*time.Second {
+		t.Errorf("Run() took %v, should abort promptly on cancellation", elapsed)
+	}
+}
+
+// TestWorkflow_RetryRespectsStepTimeout verifies the interaction between
+// per-step Timeout and RetryConfig: when the step timeout expires during
+// retry backoff, the loop stops and reports the last step error.
+func TestWorkflow_RetryRespectsStepTimeout(t *testing.T) {
+	attempts := 0
+
+	wf, err := NewWorkflow().
+		Step("flaky-slow", func(ctx context.Context, input any) (any, error) {
+			attempts++
+			return nil, errors.New("still failing")
+		}).
+		WithRetry(RetryConfig{
+			MaxRetries:        10,
+			InitialBackoff:    30 * time.Millisecond,
+			MaxBackoff:        30 * time.Millisecond,
+			BackoffMultiplier: 1.0,
+		}).
+		WithTimeout(50 * time.Millisecond).
+		Build()
+	if err != nil {
+		t.Fatalf("Build() error: %v", err)
+	}
+
+	start := time.Now()
+	_, err = wf.Run(context.Background(), nil)
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected error when step timeout expires during retries")
+	}
+	if !strings.Contains(err.Error(), "still failing") {
+		t.Errorf("error = %v, want it to wrap the step error", err)
+	}
+	if attempts >= 10 {
+		t.Errorf("attempts = %d, timeout should have stopped retries early", attempts)
+	}
+	if elapsed > 2*time.Second {
+		t.Errorf("Run() took %v, should stop near the 50ms step timeout", elapsed)
+	}
+}
+
+// TestWorkflow_RetryTimeoutBeforeFirstAttempt verifies that an
+// already-expired step context surfaces the context error when the step
+// never ran (lastErr == nil path in executeStep's select).
+func TestWorkflow_RetryTimeoutBeforeFirstAttempt(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	ran := false
+	wf, err := NewWorkflow().
+		Step("never-runs", func(ctx context.Context, input any) (any, error) {
+			ran = true
+			return "ok", nil
+		}).
+		WithRetry(RetryConfig{
+			MaxRetries:        3,
+			InitialBackoff:    time.Millisecond,
+			MaxBackoff:        time.Millisecond,
+			BackoffMultiplier: 1.0,
+		}).
+		Build()
+	if err != nil {
+		t.Fatalf("Build() error: %v", err)
+	}
+
+	// Run checks ctx before the step, so use executeStep directly to hit the
+	// retry loop's own cancellation check.
+	_, stepErr := executeStep(ctx, wf.steps[0], nil)
+	if !errors.Is(stepErr, context.Canceled) {
+		t.Errorf("executeStep() error = %v, want context.Canceled", stepErr)
+	}
+	if ran {
+		t.Error("step should not run when context is already cancelled")
 	}
 }
 

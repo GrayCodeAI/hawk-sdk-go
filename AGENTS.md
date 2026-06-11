@@ -67,7 +67,7 @@ c := New(
 ```
 
 ### Error Hierarchy
-`errors.go` defines `APIError` as the base struct with `StatusCode`, `Code`, `Message`, `Details`. Each HTTP status gets a wrapper type (`NotFoundError`, `RateLimitError`, etc.) that embeds `APIError`. All error types implement `Error()` and `Unwrap()` for `errors.Is`/`errors.As` compatibility:
+`errors.go` defines `APIError` as the base struct with `StatusCode`, `Code`, `Message`, `Details`. Each HTTP status gets a wrapper type (`NotFoundError`, `RateLimitError`, etc.) that embeds `APIError`. Subtypes inherit `Error()` via embedding (only `RateLimitError` overrides it to append retry info) and implement `Unwrap()` for `errors.Is`/`errors.As` compatibility:
 ```go
 var notFound *NotFoundError
 if errors.As(err, &notFound) {
@@ -145,7 +145,7 @@ if !errors.As(err, &notFound) { t.Error("expected NotFoundError") }
 - **Do not change**: `APIError.Error()` format string — tests assert exact string output
 - **Do not change**: JSON struct tags — they match the daemon's API contract
 - **Do not change**: `Unwrap()` implementations — `errors.As` depends on them for type matching
-- **Safe to extend**: add new error types by creating a struct embedding `APIError`, adding to `parseAPIError` switch, and implementing `Error()` + `Unwrap()`
+- **Safe to extend**: add new error types by creating a struct embedding `APIError` (which promotes `Error()`), adding to `parseAPIError` switch, and implementing `Unwrap()`
 - **Safe to extend**: add new client methods by following the `get()`/`post()` delegation pattern
 - **When adding streaming endpoints**: follow `ChatStream` pattern — set `Accept: text/event-stream`, check status before wrapping in `newStreamReader`
 - **Concurrency**: any new mutable state on `Agent` must be protected by `a.mu`

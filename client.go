@@ -42,6 +42,10 @@ func WithAPIKey(key string) ClientOption {
 }
 
 // New creates a new hawk SDK client.
+//
+// Note: the client performs no retries by default. Pass
+// WithRetry(DefaultRetryConfig()) for production use to enable automatic
+// retries with exponential backoff on transient failures.
 func New(opts ...ClientOption) *Client {
 	c := &Client{
 		baseURL:    defaultBaseURL,
@@ -144,7 +148,10 @@ func (c *Client) DeleteSession(ctx context.Context, id string) error {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+	// The daemon returns 204 No Content on delete, but older daemon versions
+	// and intermediary proxies may respond with 200 OK instead. Accepting any
+	// 2xx keeps this defensive and consistent with post()'s success handling.
+	if resp.StatusCode/100 != 2 {
 		return parseAPIError(resp)
 	}
 	return nil
@@ -226,7 +233,9 @@ func (c *Client) post(ctx context.Context, path string, body interface{}, out in
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != http.StatusOK {
+	// Accept any 2xx status: creation endpoints may return 201 Created
+	// and future endpoints may use other success codes.
+	if resp.StatusCode/100 != 2 {
 		return parseAPIError(resp)
 	}
 
