@@ -27,7 +27,7 @@ GOVULNCHECK := $(GOBIN_DIR)/govulncheck
 # ---------------------------------------------------------------------------
 # Phony declarations (alphabetical).
 # ---------------------------------------------------------------------------
-.PHONY: all bench build ci clean cover fmt help lint lint-fix \
+.PHONY: all bench boundary-guard build ci clean cover fmt help lint lint-fix \
         security test test-10x test-race tidy version vet
 
 # ---------------------------------------------------------------------------
@@ -74,6 +74,9 @@ fmt: ## Format source files (gofumpt + goimports).
 vet: ## Run go vet.
 	go vet ./...
 
+boundary-guard: ## Fail if the SDK imports support engines or Hawk private packages.
+	bash ./scripts/check-consumer-boundaries.sh
+
 lint: ## Run golangci-lint.
 	@command -v $(GOLANGCI) >/dev/null 2>&1 || (echo "install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest" && exit 1)
 	$(GOLANGCI) run ./... --timeout=5m
@@ -93,7 +96,7 @@ tidy: ## Tidy go.mod / go.sum.
 # ---------------------------------------------------------------------------
 # Composite gate used by CI and pre-push.
 # ---------------------------------------------------------------------------
-ci: tidy fmt vet lint test-race security ## Run everything CI runs.
+ci: tidy fmt vet boundary-guard lint test-race security ## Run everything CI runs.
 	@echo "All CI checks passed."
 
 # ---------------------------------------------------------------------------

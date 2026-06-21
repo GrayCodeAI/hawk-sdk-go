@@ -50,6 +50,13 @@ fmt.Println(resp.Response)
 
 See the [examples/](examples/) directory for complete runnable examples.
 
+## Ecosystem Boundaries
+
+- `hawk-sdk-go` is a consumer of Hawk public APIs and contracts.
+- Do not import support engine repos such as `eyrie`, `yaad`, `tok`, `trace`, `sight`, or `inspect`.
+- Do not import `hawk/internal/*` or removed legacy path `hawk/shared/types`.
+- Cross-repo shared vocabulary should come from Hawk public surfaces or `hawk-core-contracts`, not engine internals.
+
 ## API Reference
 
 ### Client Methods
