@@ -75,7 +75,7 @@ vet: ## Run go vet.
 	go vet ./...
 
 boundary-guard: ## Fail if the SDK imports support engines or Hawk private packages.
-	bash ./scripts/check-consumer-boundaries.sh
+	bash ./scripts/check-ecosystem-boundaries.sh
 
 lint: ## Run golangci-lint.
 	@command -v $(GOLANGCI) >/dev/null 2>&1 || (echo "install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest" && exit 1)

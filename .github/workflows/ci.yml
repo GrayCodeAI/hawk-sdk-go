@@ -58,8 +58,8 @@ jobs:
           fi
       - name: go vet
         run: go vet ./...
-      - name: consumer boundary guard
-        run: bash ./scripts/check-consumer-boundaries.sh
+      - name: ecosystem boundary guard
+        run: bash ./scripts/check-ecosystem-boundaries.sh
 
   # -------------------------------------------------------------------------
   # Lint — golangci-lint covers most static checks.
