@@ -1,0 +1,16 @@
+# CODEOWNERS for hawk-sdk-go
+* @GrayCodeAI/maintainers
+
+# SDK source
+/api/            @GrayCodeAI/core-team
+/rules/          @GrayCodeAI/core-team
+
+# CI / release / build tooling
+/.github/        @GrayCodeAI/devops-team
+/Makefile        @GrayCodeAI/devops-team
+/lefthook.yml    @GrayCodeAI/devops-team
+/scripts/        @GrayCodeAI/devops-team
+
+# Documentation
+*.md             @GrayCodeAI/docs-team
+/docs/           @GrayCodeAI/docs-team
