@@ -29,7 +29,7 @@ func TestChatWithTools_NoToolCalls(t *testing.T) {
 				Description: "Says hello",
 				Parameters:  json.RawMessage(`{"type":"object","properties":{}}`),
 			},
-			Run: func(ctx context.Context, args string) (string, error) {
+			Run: func(ctx context.Context, args map[string]interface{}) (string, error) {
 				return "hi", nil
 			},
 		},
@@ -54,7 +54,7 @@ func TestChatWithTools_ExecutesTools(t *testing.T) {
 			json.NewEncoder(w).Encode(ChatWithToolsResponse{
 				ChatResponse: ChatResponse{SessionID: "s-1", Response: ""},
 				ToolCalls: []ToolCall{
-					{ID: "tc-1", Name: "add", Arguments: `{"a":1,"b":2}`},
+					{ID: "tc-1", Name: "add", Arguments: map[string]interface{}{"a": float64(1), "b": float64(2)}},
 				},
 				FinishReason: "tool_calls",
 			})
@@ -76,12 +76,7 @@ func TestChatWithTools_ExecutesTools(t *testing.T) {
 				Description: "Adds two numbers",
 				Parameters:  json.RawMessage(`{"type":"object","properties":{"a":{"type":"number"},"b":{"type":"number"}}}`),
 			},
-			Run: func(ctx context.Context, args string) (string, error) {
-				var params struct {
-					A int `json:"a"`
-					B int `json:"b"`
-				}
-				json.Unmarshal([]byte(args), &params)
+			Run: func(ctx context.Context, args map[string]interface{}) (string, error) {
 				return "3", nil
 			},
 		},
@@ -105,7 +100,7 @@ func TestChatWithTools_MaxRoundsExceeded(t *testing.T) {
 		json.NewEncoder(w).Encode(ChatWithToolsResponse{
 			ChatResponse: ChatResponse{SessionID: "s-1", Response: ""},
 			ToolCalls: []ToolCall{
-				{ID: "tc-1", Name: "loop", Arguments: `{}`},
+				{ID: "tc-1", Name: "loop", Arguments: map[string]interface{}{}},
 			},
 			FinishReason: "tool_calls",
 		})
@@ -116,7 +111,7 @@ func TestChatWithTools_MaxRoundsExceeded(t *testing.T) {
 	tools := []Tool{
 		{
 			Schema: ToolSchema{Name: "loop", Description: "loops"},
-			Run: func(ctx context.Context, args string) (string, error) {
+			Run: func(ctx context.Context, args map[string]interface{}) (string, error) {
 				return "again", nil
 			},
 		},
@@ -137,7 +132,7 @@ func TestChatWithTools_UnknownTool(t *testing.T) {
 			json.NewEncoder(w).Encode(ChatWithToolsResponse{
 				ChatResponse: ChatResponse{SessionID: "s-1"},
 				ToolCalls: []ToolCall{
-					{ID: "tc-1", Name: "unknown_tool", Arguments: `{}`},
+					{ID: "tc-1", Name: "unknown_tool", Arguments: map[string]interface{}{}},
 				},
 				FinishReason: "tool_calls",
 			})
@@ -154,7 +149,7 @@ func TestChatWithTools_UnknownTool(t *testing.T) {
 	tools := []Tool{
 		{
 			Schema: ToolSchema{Name: "known", Description: "a known tool"},
-			Run: func(ctx context.Context, args string) (string, error) {
+			Run: func(ctx context.Context, args map[string]interface{}) (string, error) {
 				return "ok", nil
 			},
 		},
@@ -174,7 +169,7 @@ func TestChatWithTools_ContextCancelled(t *testing.T) {
 		json.NewEncoder(w).Encode(ChatWithToolsResponse{
 			ChatResponse: ChatResponse{SessionID: "s-1"},
 			ToolCalls: []ToolCall{
-				{ID: "tc-1", Name: "slow", Arguments: `{}`},
+				{ID: "tc-1", Name: "slow", Arguments: map[string]interface{}{}},
 			},
 		})
 	}))
@@ -187,7 +182,7 @@ func TestChatWithTools_ContextCancelled(t *testing.T) {
 	tools := []Tool{
 		{
 			Schema: ToolSchema{Name: "slow"},
-			Run: func(ctx context.Context, args string) (string, error) {
+			Run: func(ctx context.Context, args map[string]interface{}) (string, error) {
 				return "done", nil
 			},
 		},

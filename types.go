@@ -64,9 +64,10 @@ type Message struct {
 
 // CreateSessionRequest is the request body for POST /v1/sessions.
 type CreateSessionRequest struct {
-	Model string `json:"model,omitempty"`
-	CWD   string `json:"cwd,omitempty"`
-	Name  string `json:"name,omitempty"`
+	Model    string            `json:"model,omitempty"`
+	CWD      string            `json:"cwd,omitempty"`
+	Name     string            `json:"name,omitempty"`
+	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
 // StatsResponse is the response from GET /v1/stats.
