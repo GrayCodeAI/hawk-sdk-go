@@ -23,11 +23,12 @@ GOLANGCI    := $(GOBIN_DIR)/golangci-lint
 GOFUMPT     := $(GOBIN_DIR)/gofumpt
 GOIMPORTS   := $(GOBIN_DIR)/goimports
 GOVULNCHECK := $(GOBIN_DIR)/govulncheck
+OAPICODEGEN := $(GOBIN_DIR)/oapi-codegen
 
 # ---------------------------------------------------------------------------
 # Phony declarations (alphabetical).
 # ---------------------------------------------------------------------------
-.PHONY: all bench boundary-guard build ci clean cover fmt help lint lint-fix \
+.PHONY: all bench boundary-guard build ci clean cover fmt gen help lint lint-fix \
         security test test-10x test-race tidy version vet
 
 # ---------------------------------------------------------------------------
@@ -96,7 +97,7 @@ tidy: ## Tidy go.mod / go.sum.
 # ---------------------------------------------------------------------------
 # Composite gate used by CI and pre-push.
 # ---------------------------------------------------------------------------
-ci: tidy fmt vet boundary-guard lint test-race security ## Run everything CI runs.
+ci: tidy gen fmt vet boundary-guard lint test-race security ## Run everything CI runs.
 	@echo "All CI checks passed."
 
 # ---------------------------------------------------------------------------
@@ -106,6 +107,10 @@ version: ## Print the version that will be embedded.
 	@echo "Version: $(VERSION)"
 	@echo "Commit:  $(COMMIT)"
 	@echo "Date:    $(DATE)"
+
+gen: ## Generate code from the OpenAPI spec (requires oapi-codegen).
+	go generate ./internal/spec/
+	@echo "Code generation complete."
 
 clean: ## Remove build artefacts.
 	rm -rf coverage.out coverage.html

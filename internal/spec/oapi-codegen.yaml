@@ -1,0 +1,6 @@
+package: spec
+generate:
+  models: true
+  client: false
+  embedded-spec: false
+output: api_gen.gen.go
