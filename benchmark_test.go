@@ -258,7 +258,7 @@ func BenchmarkChatWithTools(b *testing.B) {
 		if round%2 == 1 {
 			json.NewEncoder(w).Encode(ChatWithToolsResponse{
 				ChatResponse: ChatResponse{SessionID: "s-1", Response: ""},
-				ToolCalls:    []ToolCall{{ID: "tc-1", Name: "echo", Arguments: `{"msg":"hi"}`}},
+				ToolCalls:    []ToolCall{{ID: "tc-1", Name: "echo", Arguments: map[string]interface{}{"msg": "hi"}}},
 				FinishReason: "tool_calls",
 			})
 		} else {
@@ -274,7 +274,7 @@ func BenchmarkChatWithTools(b *testing.B) {
 	tools := []Tool{
 		{
 			Schema: ToolSchema{Name: "echo", Description: "echo", Parameters: json.RawMessage(`{"type":"object"}`)},
-			Run:    func(_ context.Context, args string) (string, error) { return "echoed", nil },
+			Run:    func(_ context.Context, args map[string]interface{}) (string, error) { return "echoed", nil },
 		},
 	}
 	ctx := context.Background()
