@@ -55,7 +55,7 @@ func TestAgent_ChatWithTools(t *testing.T) {
 			json.NewEncoder(w).Encode(ChatWithToolsResponse{
 				ChatResponse: ChatResponse{SessionID: "s-tools"},
 				ToolCalls: []ToolCall{
-					{ID: "tc-1", Name: "greet", Arguments: `{"name":"world"}`},
+					{ID: "tc-1", Name: "greet", Arguments: map[string]interface{}{"name": "world"}},
 				},
 			})
 		} else {
@@ -80,9 +80,10 @@ func TestAgent_ChatWithTools(t *testing.T) {
 					Description: "Greets someone",
 					Parameters:  json.RawMessage(`{"type":"object","properties":{"name":{"type":"string"}}}`),
 				},
-				Run: func(ctx context.Context, args string) (string, error) {
+				Run: func(ctx context.Context, args map[string]interface{}) (string, error) {
 					var p struct{ Name string }
-					json.Unmarshal([]byte(args), &p)
+					b, _ := json.Marshal(args)
+					json.Unmarshal(b, &p)
 					return "Hello, " + p.Name + "!", nil
 				},
 			},
