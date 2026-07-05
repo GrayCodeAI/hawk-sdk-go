@@ -36,9 +36,11 @@ x-sdk-api:
     - name: ChatStream
       signature: "func (c *Client) ChatStream(ctx context.Context, req ChatRequest) (*StreamReader, error)"
     - name: Sessions
-      signature: "func (c *Client) Sessions(ctx context.Context, opts ListOptions) (*PaginatedResponse[Session], error)"
+      signature: "func (c *Client) Sessions(ctx context.Context) ([]SessionSummary, error)"
+    - name: Session
+      signature: "func (c *Client) Session(ctx context.Context, id string) (*SessionDetail, error)"
     - name: Messages
-      signature: "func (c *Client) Messages(ctx context.Context, sessionID string, opts ListOptions) (*PaginatedResponse[Message], error)"
+      signature: "func (c *Client) Messages(ctx context.Context, sessionID string, opts *ListOptions) (*PaginatedResponse[Message], error)"
     - name: DeleteSession
       signature: "func (c *Client) DeleteSession(ctx context.Context, sessionID string) error"
     - name: Stats

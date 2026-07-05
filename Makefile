@@ -1,5 +1,5 @@
 # Canonical hawk-eco Makefile for Go library repos.
-# Source of truth: .shared-templates/Makefile.library.tmpl at the eco root.
+# Source of truth: https://github.com/GrayCodeAI/hawk/blob/main/.shared-templates/Makefile.library.tmpl
 # Placeholders rendered per repo: hawk-sdk-go.
 
 # ---------------------------------------------------------------------------

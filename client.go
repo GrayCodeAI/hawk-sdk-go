@@ -104,14 +104,14 @@ func (c *Client) ChatStream(ctx context.Context, req ChatRequest) (*StreamReader
 	return newStreamReader(resp), nil
 }
 
-// Sessions lists all sessions with optional pagination.
-func (c *Client) Sessions(ctx context.Context, opts *ListOptions) (*PaginatedResponse[SessionSummary], error) {
-	params := paginationParams(opts)
-	var resp PaginatedResponse[SessionSummary]
-	if err := c.get(ctx, "/v1/sessions", params, &resp); err != nil {
+// Sessions lists the daemon's active sessions. The daemon returns a plain
+// array with no pagination envelope, so no list options are accepted.
+func (c *Client) Sessions(ctx context.Context) ([]SessionSummary, error) {
+	var resp []SessionSummary
+	if err := c.get(ctx, "/v1/sessions", nil, &resp); err != nil {
 		return nil, err
 	}
-	return &resp, nil
+	return resp, nil
 }
 
 // Session gets a session by ID.
@@ -161,15 +161,6 @@ func (c *Client) DeleteSession(ctx context.Context, id string) error {
 func (c *Client) Stats(ctx context.Context) (*StatsResponse, error) {
 	var resp StatsResponse
 	if err := c.get(ctx, "/v1/stats", nil, &resp); err != nil {
-		return nil, err
-	}
-	return &resp, nil
-}
-
-// CreateSession creates a new session and returns its summary.
-func (c *Client) CreateSession(ctx context.Context, req CreateSessionRequest) (*SessionSummary, error) {
-	var resp SessionSummary
-	if err := c.post(ctx, "/v1/sessions", req, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil
