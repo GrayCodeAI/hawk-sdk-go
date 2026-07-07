@@ -63,6 +63,18 @@ func (cfg *RetryConfig) isRetryable(statusCode int) bool {
 	return false
 }
 
+// retryableForMethod reports whether statusCode should trigger a retry,
+// accounting for whether the request being retried is idempotent. Only 429
+// is retried for non-idempotent requests (e.g. POST /v1/chat): a 5xx may
+// mean the daemon already started processing the request, so blindly
+// resubmitting it could duplicate side effects.
+func (cfg *RetryConfig) retryableForMethod(statusCode int, idempotent bool) bool {
+	if !idempotent {
+		return statusCode == http.StatusTooManyRequests
+	}
+	return cfg.isRetryable(statusCode)
+}
+
 // backoffDuration computes the backoff duration for the given attempt (0-indexed).
 // It uses exponential backoff with full jitter.
 func (cfg *RetryConfig) backoffDuration(attempt int) time.Duration {
@@ -90,7 +102,10 @@ func sleepWithContext(ctx context.Context, d time.Duration) error {
 
 // doWithRetry executes the given HTTP request with retry logic.
 // It returns the response from the first successful attempt or the last failed attempt.
-func (c *Client) doWithRetry(ctx context.Context, req *http.Request, body []byte) (*http.Response, error) {
+// idempotent must be false for requests that are not safe to blindly resend
+// after a 5xx (e.g. POST /v1/chat), since the daemon may have already
+// started processing the original attempt.
+func (c *Client) doWithRetry(ctx context.Context, req *http.Request, body []byte, idempotent bool) (*http.Response, error) {
 	cfg := c.retryConfig
 	if cfg == nil {
 		return c.httpClient.Do(req)
@@ -123,7 +138,7 @@ func (c *Client) doWithRetry(ctx context.Context, req *http.Request, body []byte
 		}
 
 		// Success — not retryable.
-		if !cfg.isRetryable(resp.StatusCode) {
+		if !cfg.retryableForMethod(resp.StatusCode, idempotent) {
 			return resp, nil
 		}
 
@@ -132,11 +147,16 @@ func (c *Client) doWithRetry(ctx context.Context, req *http.Request, body []byte
 		lastErr = nil
 
 		if attempt < cfg.MaxRetries {
-			// For 429, respect Retry-After header if present.
+			// For 429, respect Retry-After header if present, clamped to
+			// MaxBackoff so a misbehaving daemon/proxy can't force an
+			// arbitrarily long sleep.
 			backoff := cfg.backoffDuration(attempt)
 			if resp.StatusCode == http.StatusTooManyRequests {
 				if raHeader := resp.Header.Get("Retry-After"); raHeader != "" {
 					if parsed := parseRetryAfter(raHeader); parsed >= 0 {
+						if parsed > cfg.MaxBackoff {
+							parsed = cfg.MaxBackoff
+						}
 						backoff = parsed
 					}
 				}

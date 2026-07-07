@@ -91,7 +91,7 @@ func (c *Client) ChatStream(ctx context.Context, req ChatRequest) (*StreamReader
 	httpReq.Header.Set("User-Agent", userAgent())
 	c.setAuth(httpReq)
 
-	resp, err := c.doWithRetry(ctx, httpReq, body)
+	resp, err := c.doWithRetry(ctx, httpReq, body, false)
 	if err != nil {
 		return nil, fmt.Errorf("hawk-sdk: stream request: %w", err)
 	}
@@ -142,7 +142,8 @@ func (c *Client) DeleteSession(ctx context.Context, id string) error {
 	req.Header.Set("User-Agent", userAgent())
 	c.setAuth(req)
 
-	resp, err := c.doWithRetry(ctx, req, nil)
+	// DELETE is idempotent: safe to retry on any configured status.
+	resp, err := c.doWithRetry(ctx, req, nil, true)
 	if err != nil {
 		return fmt.Errorf("hawk-sdk: delete request: %w", err)
 	}
@@ -173,7 +174,7 @@ func (c *Client) setAuth(req *http.Request) {
 	}
 }
 
-func (c *Client) get(ctx context.Context, path string, params url.Values, out interface{}) error {
+func (c *Client) get(ctx context.Context, path string, params url.Values, out any) error {
 	u := c.baseURL + path
 	if params != nil {
 		u += "?" + params.Encode()
@@ -187,7 +188,8 @@ func (c *Client) get(ctx context.Context, path string, params url.Values, out in
 	req.Header.Set("User-Agent", userAgent())
 	c.setAuth(req)
 
-	resp, err := c.doWithRetry(ctx, req, nil)
+	// GET is idempotent: safe to retry on any configured status.
+	resp, err := c.doWithRetry(ctx, req, nil, true)
 	if err != nil {
 		return fmt.Errorf("hawk-sdk: request failed: %w", err)
 	}
@@ -203,7 +205,7 @@ func (c *Client) get(ctx context.Context, path string, params url.Values, out in
 	return nil
 }
 
-func (c *Client) post(ctx context.Context, path string, body interface{}, out interface{}) error {
+func (c *Client) post(ctx context.Context, path string, body any, out any) error {
 	data, err := json.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("hawk-sdk: marshal body: %w", err)
@@ -218,7 +220,10 @@ func (c *Client) post(ctx context.Context, path string, body interface{}, out in
 	req.Header.Set("User-Agent", userAgent())
 	c.setAuth(req)
 
-	resp, err := c.doWithRetry(ctx, req, data)
+	// POST is not idempotent (currently only used for /v1/chat): a 5xx may
+	// mean the daemon already started processing the request, so only 429
+	// is retried.
+	resp, err := c.doWithRetry(ctx, req, data, false)
 	if err != nil {
 		return fmt.Errorf("hawk-sdk: request failed: %w", err)
 	}

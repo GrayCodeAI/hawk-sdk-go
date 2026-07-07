@@ -24,7 +24,7 @@ type Tool struct {
 	Schema ToolSchema
 
 	// Run executes the tool with the given arguments and returns a result string.
-	Run func(ctx context.Context, arguments map[string]interface{}) (string, error)
+	Run func(ctx context.Context, arguments map[string]any) (string, error)
 }
 
 // ToolCall represents a tool invocation requested by the model.
@@ -36,7 +36,7 @@ type ToolCall struct {
 	Name string `json:"name"`
 
 	// Arguments is the arguments object for the tool call.
-	Arguments map[string]interface{} `json:"arguments"`
+	Arguments map[string]any `json:"arguments"`
 }
 
 // ToolResult holds the result of executing a tool call.
