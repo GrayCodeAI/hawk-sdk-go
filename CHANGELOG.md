@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **BREAKING: `Sessions()` now returns `[]SessionSummary`** and takes no
+  `ListOptions`. The daemon's `GET /v1/sessions` returns a bare JSON array
+  with no pagination envelope, so the previous
+  `*PaginatedResponse[SessionSummary]` signature could never decode a real
+  response. `Messages()` is unchanged — that endpoint is paginated.
+- **`Message.ToolResult` JSON tag fixed** from `tool_result` to
+  `tool_results` to match the daemon's message payload.
+
+### Removed
+- **BREAKING: `CreateSession()` and `CreateSessionRequest`.** The daemon has
+  no `POST /v1/sessions` endpoint — sessions are created implicitly by
+  `POST /v1/chat`. The method always returned 404 against a real daemon.
+  Use `Chat`/`ChatStream` instead.
+
 ## [0.1.0] — 2026-06-08
 
 ### Added

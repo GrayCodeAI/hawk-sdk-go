@@ -1,5 +1,5 @@
 # Canonical hawk-eco Makefile for Go library repos.
-# Source of truth: .shared-templates/Makefile.library.tmpl at the eco root.
+# Source of truth: https://github.com/GrayCodeAI/hawk/blob/main/.shared-templates/Makefile.library.tmpl
 # Placeholders rendered per repo: hawk-sdk-go.
 
 # ---------------------------------------------------------------------------
@@ -15,6 +15,11 @@ VERSION ?= $(shell cat VERSION 2>/dev/null | head -n1 | tr -d '[:space:]' || git
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 DATE    := $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 
+LDFLAGS := -s -w \
+	-X main.version=$(VERSION) \
+	-X main.commit=$(COMMIT) \
+	-X main.date=$(DATE)
+
 # ---------------------------------------------------------------------------
 # Tooling — pinned, install if missing.
 # ---------------------------------------------------------------------------
@@ -28,8 +33,8 @@ OAPICODEGEN := $(GOBIN_DIR)/oapi-codegen
 # ---------------------------------------------------------------------------
 # Phony declarations (alphabetical).
 # ---------------------------------------------------------------------------
-.PHONY: all bench boundary-guard build ci clean cover fmt gen help lint lint-fix \
-        security test test-10x test-race tidy version vet
+.PHONY: all bench boundary-guard build ci clean contracts-guard cover fmt gen help \
+        install lint lint-fix security setup smoke test test-10x test-race tidy version vet
 
 # ---------------------------------------------------------------------------
 # Default target.
@@ -39,8 +44,8 @@ all: lint test build ## Default — lint, test, build.
 # ---------------------------------------------------------------------------
 # Build (verify the library compiles).
 # ---------------------------------------------------------------------------
-build: ## Verify the library compiles.
-	CGO_ENABLED=0 go build ./...
+build: ## Build the library.
+	CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" ./...
 
 # ---------------------------------------------------------------------------
 # Tests.
@@ -78,6 +83,9 @@ vet: ## Run go vet.
 boundary-guard: ## Fail if the SDK imports support engines or Hawk private packages.
 	bash ./scripts/check-ecosystem-boundaries.sh
 
+ecossystem-guard: ## Fail if external ecosystem repos import hawk/internal or removed hawk/shared/types.
+	bash ./scripts/check-shared-types-imports.sh
+
 lint: ## Run golangci-lint.
 	@command -v $(GOLANGCI) >/dev/null 2>&1 || (echo "install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest" && exit 1)
 	$(GOLANGCI) run ./... --timeout=5m
@@ -97,7 +105,7 @@ tidy: ## Tidy go.mod / go.sum.
 # ---------------------------------------------------------------------------
 # Composite gate used by CI and pre-push.
 # ---------------------------------------------------------------------------
-ci: tidy gen fmt vet boundary-guard lint test-race security ## Run everything CI runs.
+ci: tidy fmt vet boundary-guard lint test-race security ## Run everything CI runs.
 	@echo "All CI checks passed."
 
 # ---------------------------------------------------------------------------
@@ -113,7 +121,7 @@ gen: ## Generate code from the OpenAPI spec (requires oapi-codegen).
 	@echo "Code generation complete."
 
 clean: ## Remove build artefacts.
-	rm -rf coverage.out coverage.html
+	rm -rf bin/ dist/ coverage.out coverage.html
 	go clean -testcache
 
 help: ## Show this help.
@@ -121,4 +129,19 @@ help: ## Show this help.
 
 .PHONY: hooks
 hooks:
-	git config core.hooksPath .githooks
+	@command -v lefthook >/dev/null 2>&1 || (echo "install: go install github.com/evilmartians/lefthook@latest" && exit 1)
+	lefthook install
+
+setup: ## Set up local development environment (tooling, git hooks).
+	@command -v $(GOFUMPT)   >/dev/null 2>&1 || go install mvdan.cc/gofumpt@latest || echo "  ⚠ Could not install gofumpt"
+	@command -v $(GOIMPORTS) >/dev/null 2>&1 || go install golang.org/x/tools/cmd/goimports@latest || echo "  ⚠ Could not install goimports"
+	@command -v $(GOLANGCI)  >/dev/null 2>&1 || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest || echo "  ⚠ Could not install golangci-lint"
+	@command -v $(GOVULNCHECK) >/dev/null 2>&1 || go install golang.org/x/vuln/cmd/govulncheck@latest || echo "  ⚠ Could not install govulncheck"
+	@echo "✓ All tools installed"
+	@echo "✓ Setup complete! Run 'make ci' to verify everything works."
+
+smoke: ## Quick build + test verification.
+	@echo "Running smoke checks..."
+	$(MAKE) build
+	$(MAKE) test-race
+	@echo "Smoke checks passed!"

@@ -1,151 +1,168 @@
-# AGENTS.md — hawk-sdk-go
+---
+description: Extending hawk-eco — how to write AGENTS.md files, custom specialists, skills, hooks, MCP servers, and plugins.
+globs: "*.go, *.js, *.md, *.json, *.toml, *.yaml, *.yml"
+alwaysApply: false
+---
 
-Go SDK for the hawk daemon API. Dependency-free client for chat, streaming, sessions, messages, and stats. Built for solo developers running hawk locally.
+# Extending hawk-eco
 
-## Design Principles
+hawk-eco is an open-source code intelligence platform. This document describes how to extend it with custom tools, skills, hooks, and integrations.
 
-- **Dependency-free** — no third-party imports
-- **Idiomatic Go** — follows Go conventions and error handling patterns
-- **Local-only** — nothing calls third-party services or phones home
+## 1. Drop a project `AGENTS.md`
 
-## Build & Test
+When hawk-eco starts in a directory, it looks for project-level instructions and injects them into the system prompt. The lookup walks from your current working directory **up to the nearest git root** and reads the first matching file at each level — general rules at the repo root, more specific rules in sub-trees. Files are labeled with their directory in the prompt (e.g. `## Project guidelines (services/api/AGENTS.md)`).
+
+Accepted file names, in priority order at each level:
+
+| Path | Notes |
+| --- | --- |
+| `./AGENTS.md` | The classic spot — committed to your repo, shared with the team. |
+| `./ZERO.md` | Brand-specific alias. Same format, lower priority. |
+| `./.zero/AGENTS.md` | Project-local, hidden, gitignored. Personal notes that stay out of git. |
+
+Matching is **case-insensitive** on the basename, so `AGENTS.md`, `Agents.md`, and `agents.md` resolve to the same file on Windows and macOS. The git-tracked filename in this repo is `AGENTS.md` — keep that on case-sensitive filesystems (Linux, the WSL filesystem, or a CI runner) to match what the loader looks for.
+
+Both files use the same format. YAML frontmatter is optional; the markdown body is loaded as instructions for the agent. hawk-eco reads the file once at session start, so changes take effect on the next launch — not mid-session.
+
+```markdown
+# Project conventions for <your project>
+
+- Build with `make`, not `go build` directly.
+- Tests live next to the source file (`foo_test.go` next to `foo.go`).
+- Run `make lint` before opening a PR.
+- Never edit files under `third_party/` — those are vendored.
+```
+
+Tips:
+
+- Keep each file under ~8 KiB. hawk-eco caps the **total** across all matched files at 32 KiB; everything past the cap is dropped.
+- Re-state rules in the imperative voice: "Run `make lint`", not "you should consider running the linter".
+- Don't put secrets, model IDs, or environment-specific paths in `AGENTS.md`. Use config files for those.
+- In a monorepo, drop a narrower `AGENTS.md` in each sub-tree (e.g. `services/api/AGENTS.md`). hawk-eco picks those up automatically when you launch from inside the sub-tree.
+- A YAML frontmatter block (`---\n...\n---`) at the top is preserved verbatim in the injected prompt but is not parsed for `globs:` or `alwaysApply:` scoping today — keep the body self-contained.
+
+### Personal guidelines, across every project
+
+For preferences that follow *you*, not a specific repo (tone, tooling habits, workflow), drop a `ZERO.md` in your user config directory: `~/.config/hawk-eco/ZERO.md` on Linux/macOS, `%AppData%\Roaming\hawk-eco\ZERO.md` on Windows — the same directory as config files and your personal specialists. Same format and 8 KiB cap as the project files above, and the same case-insensitive basename match.
+
+This file is injected as its own `## User guidelines` section, before the project's `AGENTS.md`/`ZERO.md`, and is labeled as personal preference in the prompt: project guidelines are the later, more specific instruction and take precedence over it when the two conflict.
+
+## 2. Custom specialists
+
+Specialists are hawk-eco's sub-agents. Three scopes, in priority order:
+
+| Scope | Path | Shared? |
+| --- | --- | --- |
+| Built-in | compiled into hawk-eco | yes |
+| User | `~/.config/hawk-eco/specialists/*.md` | no — your machine only |
+| Project | `./.zero/specialists/*.md` | yes — the repo team |
+
+Project overrides user overrides built-in when names collide.
+
+A specialist is a markdown manifest with frontmatter and a system prompt:
+
+```markdown
+---
+description: Reviews API changes for breaking-change risk and missing tests.
+tools: read-only,plan
+---
+
+You review API changes. For every changed hunk in `internal/api/` or any file
+that ends in `_api.go`:
+
+1. Confirm the public signature is backward-compatible, or note the breaking
+   change explicitly with the migration path.
+2. Confirm a corresponding test exists in `internal/api/*_test.go` and that
+   the new behaviour is exercised.
+3. Flag any new exported symbol without a doc comment.
+
+Reply with one JSON object per finding: `{"file", "line", "severity", "message", "fix"}`.
+```
+
+CLI management:
 
 ```bash
-go test ./...                    # Run all tests
-go test -race ./...              # Race detector
-go test -coverprofile=c.out ./... # Coverage
-go vet ./...                     # Static analysis
-gofumpt -w .                     # Format
+hawk-eco specialist list
+hawk-eco specialist show api-reviewer
+hawk-eco specialist create api-reviewer \
+    --project \
+    --description "Reviews API changes" \
+    --tools read-only,plan \
+    --prompt "$(cat api-reviewer.md)"
+hawk-eco specialist edit api-reviewer --project
+hawk-eco specialist delete api-reviewer --project
+hawk-eco specialist path                       # prints the resolved specialists directory
 ```
 
-## Architecture
+## 3. Skills
 
-- `client.go` — Main client with HTTP transport
-- `chat.go` — Chat and streaming operations
-- `session.go` — Session management
-- `stats.go` — Aggregated statistics
-- `errors.go` — Typed error categories
-- `retry.go` — Exponential backoff with Retry-After honoring
+Skills are markdown instruction files that extend agent capabilities. They can be:
+- Project-scoped: dropped in `./.zero/skills/` or `./skills/`
+- User-scoped: dropped in `~/.config/hawk-eco/skills/`
 
-## Conventions
+A skill manifest:
 
-- Go 1.26+, pure Go, no CGO
-- Table-driven tests
-- Conventional Commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`
-- No `Co-authored-by:` trailers
-- `gofumpt` formatting enforced in CI
-- `AgentConfig` fields must be wired up (see recent security fixes)
+```markdown
+---
+description: How to review Go code for security issues
+globs: "*.go"
+alwaysApply: true
+---
 
-## Common Pitfalls
+When reviewing Go code for security:
 
-- `Retry-After: 0` is valid — respect it
-- Session ID must be set atomically (race condition fixed)
-- Default timeout is required — don't leave it zero
-- Scanner buffer size matters for large responses
-
-## Naming Conventions
-
-- **Package**: `hawksdk` — all exported symbols live in this single package
-- **Types**: PascalCase, noun-based (`Client`, `ChatRequest`, `ChatResponse`, `StreamReader`, `RetryConfig`)
-- **Error types**: suffix with `Error` (`APIError`, `NotFoundError`, `RateLimitError`, `InternalServerError`)
-- **Constructor options**: `With` prefix, functional options pattern (`WithBaseURL`, `WithHTTPClient`, `WithAPIKey`, `WithRetry`)
-- **Methods**: PascalCase for exported, camelCase for unexported (`Health`, `Chat`, `get`, `post`, `doWithRetry`, `setAuth`)
-- **JSON tags**: snake_case matching the daemon API (`json:"session_id,omitempty"`, `json:"tokens_in"`)
-- **Constants**: camelCase for unexported (`defaultBaseURL`), PascalCase for exported (`Version`)
-- **Test functions**: `Test` + method name (`TestHealth`, `TestChat`, `TestChatStream`, `TestHTTPError`, `TestConcurrencyClient`)
-
-## API Patterns
-
-### Functional Options
-The `Client` uses the functional options pattern. `ClientOption` is `func(*Client)`. Options like `WithBaseURL`, `WithHTTPClient`, `WithAPIKey`, and `WithRetry` return closures that modify the client:
-```go
-c := New(
-    WithBaseURL("http://localhost:4590"),
-    WithAPIKey("sk-..."),
-    WithRetry(DefaultRetryConfig()),
-)
+1. Check for SQL injection patterns
+2. Verify error handling doesn't expose sensitive data
+3. Confirm secrets are not hardcoded
+4. Validate input sanitization
 ```
 
-### Error Hierarchy
-`errors.go` defines `APIError` as the base struct with `StatusCode`, `Code`, `Message`, `Details`. Each HTTP status gets a wrapper type (`NotFoundError`, `RateLimitError`, etc.) that embeds `APIError`. Subtypes inherit `Error()` via embedding (only `RateLimitError` overrides it to append retry info) and implement `Unwrap()` for `errors.Is`/`errors.As` compatibility:
-```go
-var notFound *NotFoundError
-if errors.As(err, &notFound) {
-    // handle 404
-}
+## 4. Hooks
+
+Hooks allow custom commands to run at specific lifecycle points:
+- `beforeReview` — runs before code review starts
+- `afterReview` — runs after code review completes
+- `sessionStart` — runs at session initialization
+- `sessionEnd` — runs at session teardown
+
+```bash
+hawk-eco hook add beforeReview --command "lint-check"
+hawk-eco hook remove beforeReview
+hawk-eco hook list
 ```
 
-### Internal Transport
-`get()` and `post()` are unexported methods on `*Client` that handle request construction, auth headers, retry, response decoding, and error parsing. All public methods delegate to them. `ChatStream` and `DeleteSession` are exceptions — they need custom response handling.
+## 5. MCP integration
 
-### Retry with Context
-`doWithRetry()` clones the request body for each attempt (using `io.NopCloser(bytes.NewReader(body))`), respects `Retry-After` headers on 429, and uses `sleepWithContext()` to honor context cancellation during backoff. Network errors are retryable; non-retryable status codes pass through immediately.
+MCP (Model Context Protocol) servers can expose tools to hawk-eco:
 
-### Generics
-`PaginatedResponse[T any]` uses Go generics. The `ListOptions` struct configures pagination. `Sessions()`, `Messages()` return `*PaginatedResponse[T]`.
-
-### Agent Thread Safety
-`Agent` uses `sync.Mutex` to protect `sessionID` from concurrent reads/writes. The mutex is locked in `Chat()` and `ChatStream()`. `SessionID()` also acquires the lock.
-
-## Testing Patterns
-
-### httptest Servers
-All tests use `net/http/httptest.NewServer` to spin up local HTTP servers. Each test registers a `HandlerFunc` that checks the request path, method, and body, then returns a JSON-encoded response:
-```go
-srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    if r.URL.Path != "/v1/health" { t.Errorf(...) }
-    json.NewEncoder(w).Encode(HealthResponse{Status: "ok"})
-}))
-defer srv.Close()
-c := New(WithBaseURL(srv.URL))
+```bash
+hawk-eco mcp add --name server --url http://localhost:8080
+hawk-eco mcp remove server
+hawk-eco mcp list
 ```
 
-### Typed Error Verification
-Tests use `errors.As` to verify error types, and check the `Error()` string format:
-```go
-var notFound *NotFoundError
-if !errors.As(err, &notFound) { t.Error("expected NotFoundError") }
+## 6. Plugins
+
+Plugins extend hawk-eco with custom tools and capabilities:
+
+```bash
+hawk-eco plugin add --name my-plugin --path ./my-plugin
+hawk-eco plugin remove my-plugin
+hawk-eco plugin list
 ```
 
-### Concurrency Tests
-`TestConcurrencyClient` and `TestConcurrencyAgent` spawn 20 goroutines hitting the same client/agent simultaneously, using `sync.WaitGroup` and error channels. This verifies thread safety of internal state.
+## 7. Verification
 
-### Network Failure Tests
-`TestNetworkFailure` and `TestNetworkFailureAllMethods` use an unreachable port (`127.0.0.1:1`) with `MaxRetries: 0` to verify graceful error handling for all HTTP methods.
+hawk-eco includes a self-verification system to validate local changes before contributing:
 
-### SSE Stream Tests
-`TestChatStream` writes SSE-formatted data (`"data: Hello\n\n"`) and verifies `stream.Next()` returns correct events, terminating with `io.EOF`.
+```bash
+hawk-eco verify
+hawk-eco verify --fix
+```
 
-## Key File Locations
+## Development
 
-| What | Where |
-|------|-------|
-| Client + transport | `client.go` |
-| API types + JSON tags | `types.go` |
-| Error types + parser | `errors.go` |
-| Retry + backoff | `retry.go` |
-| SSE streaming | `stream.go` |
-| Stream helpers | `stream_helpers.go` |
-| Agent abstraction | `agent.go` |
-| Tool definitions | `tools.go` |
-| Workflow engine | `workflow.go` |
-| Version constant | `version.go` |
-| Client tests | `client_test.go` |
-| Agent tests | `agent_test.go` |
-| Stream tests | `stream_test.go` |
-| Error tests | `errors_test.go` |
-| Retry tests | `retry_test.go` |
-| Workflow tests | `workflow_test.go` |
-| Tool tests | `tools_test.go` |
-| Session tests | `sessions_test.go` |
-
-## Refactoring Guidelines
-
-- **Safe to refactor**: `get()`/`post()` internals — they are unexported and all public methods go through them
-- **Do not change**: `APIError.Error()` format string — tests assert exact string output
-- **Do not change**: JSON struct tags — they match the daemon's API contract
-- **Do not change**: `Unwrap()` implementations — `errors.As` depends on them for type matching
-- **Safe to extend**: add new error types by creating a struct embedding `APIError` (which promotes `Error()`), adding to `parseAPIError` switch, and implementing `Unwrap()`
-- **Safe to extend**: add new client methods by following the `get()`/`post()` delegation pattern
-- **When adding streaming endpoints**: follow `ChatStream` pattern — set `Accept: text/event-stream`, check status before wrapping in `newStreamReader`
-- **Concurrency**: any new mutable state on `Agent` must be protected by `a.mu`
+```bash
+make lint
+hawk-eco verify
+```

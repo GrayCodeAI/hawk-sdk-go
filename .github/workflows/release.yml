@@ -1,6 +1,6 @@
 # Release workflow for hawk-sdk-go (Go library — no binaries).
 # Triggered by release-please when it pushes a v* tag.
-# Source of truth: .shared-templates/workflows/go-lib-release.yml.tmpl
+# Source of truth: https://github.com/GrayCodeAI/hawk/blob/main/.shared-templates/workflows/go-lib-release.yml.tmpl
 
 name: release
 
