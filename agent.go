@@ -26,13 +26,16 @@ type AgentConfig struct {
 
 // MemoryConfig configures memory behavior for an agent.
 type MemoryConfig struct {
-	// Enabled controls whether memory is active.
+	// Enabled controls whether memory is active. If false, SessionID is
+	// ignored and each Chat call starts a fresh, session-less conversation.
 	Enabled bool
 
-	// SessionID allows resuming a previous session.
+	// SessionID allows resuming a previous session. Only used when Enabled
+	// is true.
 	SessionID string
 
-	// MaxMessages limits how many messages are retained in context.
+	// MaxMessages is reserved for a future client-side history limit; it is
+	// not yet enforced (the daemon manages context retention per session).
 	MaxMessages int
 }
 
@@ -62,7 +65,7 @@ func NewAgent(client *Client, config AgentConfig) *Agent {
 		client: client,
 		config: config,
 	}
-	if config.Memory != nil && config.Memory.SessionID != "" {
+	if config.Memory != nil && config.Memory.Enabled && config.Memory.SessionID != "" {
 		a.sessionID = config.Memory.SessionID
 	}
 	return a

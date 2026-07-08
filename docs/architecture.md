@@ -60,7 +60,7 @@ defer stream.Close()
 for { ev, err := stream.Next(); if err != nil { break }; fmt.Print(ev.Data) }
 
 // 📋 Sessions
-sessions, _ := c.Sessions(ctx, &hawksdk.ListOptions{Limit: 10})
+sessions, _ := c.Sessions(ctx)
 msgs, _     := c.Messages(ctx, sessionID, nil)
 _            = c.DeleteSession(ctx, sessionID)
 

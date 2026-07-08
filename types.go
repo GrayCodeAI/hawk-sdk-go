@@ -59,15 +59,7 @@ type Message struct {
 	Role       string       `json:"role"`
 	Content    string       `json:"content,omitempty"`
 	ToolUse    []ToolCall   `json:"tool_use,omitempty"`
-	ToolResult []ToolResult `json:"tool_result,omitempty"`
-}
-
-// CreateSessionRequest is the request body for POST /v1/sessions.
-type CreateSessionRequest struct {
-	Model    string            `json:"model,omitempty"`
-	CWD      string            `json:"cwd,omitempty"`
-	Name     string            `json:"name,omitempty"`
-	Metadata map[string]string `json:"metadata,omitempty"`
+	ToolResult []ToolResult `json:"tool_results,omitempty"`
 }
 
 // StatsResponse is the response from GET /v1/stats.

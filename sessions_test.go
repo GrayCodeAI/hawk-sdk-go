@@ -19,70 +19,47 @@ func TestSessionsList(t *testing.T) {
 		if r.Method != "GET" {
 			t.Errorf("unexpected method: %s", r.Method)
 		}
-		if got := r.URL.Query().Get("offset"); got != "5" {
-			t.Errorf("offset = %q, want %q", got, "5")
-		}
-		if got := r.URL.Query().Get("limit"); got != "2" {
-			t.Errorf("limit = %q, want %q", got, "2")
-		}
-
-		json.NewEncoder(w).Encode(PaginatedResponse[SessionSummary]{
-			Data: []SessionSummary{
-				{ID: "sess-1", Turns: 5, CWD: "/tmp"},
-				{ID: "sess-2", Turns: 10, CWD: "/home"},
-			},
-			Total:   5,
-			Offset:  5,
-			Limit:   2,
-			HasMore: true,
-		})
-	}))
-	defer srv.Close()
-
-	c := New(WithBaseURL(srv.URL))
-	resp, err := c.Sessions(context.Background(), &ListOptions{Offset: 5, Limit: 2})
-	if err != nil {
-		t.Fatalf("Sessions() error: %v", err)
-	}
-	if resp.Total != 5 {
-		t.Errorf("Total = %d, want 5", resp.Total)
-	}
-	if !resp.HasMore {
-		t.Error("HasMore = false, want true")
-	}
-	if len(resp.Data) != 2 {
-		t.Fatalf("len(Data) = %d, want 2", len(resp.Data))
-	}
-	if resp.Data[0].ID != "sess-1" {
-		t.Errorf("Data[0].ID = %q, want %q", resp.Data[0].ID, "sess-1")
-	}
-	if resp.Data[1].Turns != 10 {
-		t.Errorf("Data[1].Turns = %d, want 10", resp.Data[1].Turns)
-	}
-}
-
-func TestSessionsListNoPagination(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.RawQuery != "" {
 			t.Errorf("unexpected query params: %s", r.URL.RawQuery)
 		}
-		json.NewEncoder(w).Encode(PaginatedResponse[SessionSummary]{
-			Data:  []SessionSummary{},
-			Total: 0,
+
+		// The daemon returns a bare JSON array, not a pagination envelope.
+		json.NewEncoder(w).Encode([]SessionSummary{
+			{ID: "sess-1", Turns: 5, CWD: "/tmp"},
+			{ID: "sess-2", Turns: 10, CWD: "/home"},
 		})
 	}))
 	defer srv.Close()
 
 	c := New(WithBaseURL(srv.URL))
-	resp, err := c.Sessions(context.Background(), nil)
+	sessions, err := c.Sessions(context.Background())
 	if err != nil {
 		t.Fatalf("Sessions() error: %v", err)
 	}
-	if resp.Total != 0 {
-		t.Errorf("Total = %d, want 0", resp.Total)
+	if len(sessions) != 2 {
+		t.Fatalf("len(sessions) = %d, want 2", len(sessions))
 	}
-	if resp.HasMore {
-		t.Error("HasMore = true, want false")
+	if sessions[0].ID != "sess-1" {
+		t.Errorf("sessions[0].ID = %q, want %q", sessions[0].ID, "sess-1")
+	}
+	if sessions[1].Turns != 10 {
+		t.Errorf("sessions[1].Turns = %d, want 10", sessions[1].Turns)
+	}
+}
+
+func TestSessionsListEmpty(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode([]SessionSummary{})
+	}))
+	defer srv.Close()
+
+	c := New(WithBaseURL(srv.URL))
+	sessions, err := c.Sessions(context.Background())
+	if err != nil {
+		t.Fatalf("Sessions() error: %v", err)
+	}
+	if len(sessions) != 0 {
+		t.Errorf("len(sessions) = %d, want 0", len(sessions))
 	}
 }
 
@@ -286,97 +263,26 @@ func TestDeleteSessionPathEscape(t *testing.T) {
 	}
 }
 
-func TestCreateSession(t *testing.T) {
-	var gotBody CreateSessionRequest
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/v1/sessions" {
-			t.Errorf("unexpected path: %s", r.URL.Path)
-		}
-		if r.Method != "POST" {
-			t.Errorf("unexpected method: %s", r.Method)
-		}
-		if r.Header.Get("Content-Type") != "application/json" {
-			t.Errorf("Content-Type = %q, want application/json", r.Header.Get("Content-Type"))
-		}
-		json.NewDecoder(r.Body).Decode(&gotBody)
-
-		json.NewEncoder(w).Encode(SessionSummary{
-			ID:        "new-sess-1",
-			CreatedAt: time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC),
-			Turns:     0,
-			CWD:       "/home/user/project",
-		})
-	}))
-	defer srv.Close()
-
-	c := New(WithBaseURL(srv.URL))
-	req := CreateSessionRequest{
-		Model: "claude-opus-4-6",
-		CWD:   "/home/user/project",
-		Name:  "my-session",
-	}
-	resp, err := c.CreateSession(context.Background(), req)
-	if err != nil {
-		t.Fatalf("CreateSession() error: %v", err)
-	}
-	if gotBody.Model != "claude-opus-4-6" {
-		t.Errorf("request Model = %q, want %q", gotBody.Model, "claude-opus-4-6")
-	}
-	if gotBody.CWD != "/home/user/project" {
-		t.Errorf("request CWD = %q, want %q", gotBody.CWD, "/home/user/project")
-	}
-	if gotBody.Name != "my-session" {
-		t.Errorf("request Name = %q, want %q", gotBody.Name, "my-session")
-	}
-	if resp.ID != "new-sess-1" {
-		t.Errorf("ID = %q, want %q", resp.ID, "new-sess-1")
-	}
-	if resp.CWD != "/home/user/project" {
-		t.Errorf("CWD = %q, want %q", resp.CWD, "/home/user/project")
-	}
-}
-
-// TestCreateSession201 verifies that post() accepts any 2xx status, not
-// just 200 OK — creation endpoints commonly return 201 Created.
-func TestCreateSession201(t *testing.T) {
+// TestChatAccepts201 verifies that post() accepts any 2xx status, not
+// just 200 OK — future endpoints may use other success codes.
+func TestChatAccepts201(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(SessionSummary{
-			ID:  "created-sess",
-			CWD: "/tmp",
+		json.NewEncoder(w).Encode(ChatResponse{
+			SessionID: "sess-201",
+			Response:  "hi",
 		})
 	}))
 	defer srv.Close()
 
 	c := New(WithBaseURL(srv.URL))
-	resp, err := c.CreateSession(context.Background(), CreateSessionRequest{Name: "n"})
+	resp, err := c.Chat(context.Background(), ChatRequest{Prompt: "hello"})
 	if err != nil {
-		t.Fatalf("CreateSession() with 201 response error: %v", err)
+		t.Fatalf("Chat() with 201 response error: %v", err)
 	}
-	if resp.ID != "created-sess" {
-		t.Errorf("ID = %q, want %q", resp.ID, "created-sess")
-	}
-}
-
-func TestCreateSessionEmptyBody(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var req CreateSessionRequest
-		json.NewDecoder(r.Body).Decode(&req)
-		if req.Model != "" || req.CWD != "" || req.Name != "" {
-			t.Errorf("expected empty request body, got %+v", req)
-		}
-		json.NewEncoder(w).Encode(SessionSummary{ID: "auto-sess"})
-	}))
-	defer srv.Close()
-
-	c := New(WithBaseURL(srv.URL))
-	resp, err := c.CreateSession(context.Background(), CreateSessionRequest{})
-	if err != nil {
-		t.Fatalf("CreateSession() error: %v", err)
-	}
-	if resp.ID != "auto-sess" {
-		t.Errorf("ID = %q, want %q", resp.ID, "auto-sess")
+	if resp.SessionID != "sess-201" {
+		t.Errorf("SessionID = %q, want %q", resp.SessionID, "sess-201")
 	}
 }
 
@@ -416,7 +322,7 @@ func TestSessionsListError404(t *testing.T) {
 	defer srv.Close()
 
 	c := New(WithBaseURL(srv.URL))
-	_, err := c.Sessions(context.Background(), nil)
+	_, err := c.Sessions(context.Background())
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -452,18 +358,19 @@ func TestSessionError500(t *testing.T) {
 	}
 }
 
-func TestCreateSessionError500(t *testing.T) {
+// TestChatError500 verifies that post() maps 5xx responses to typed errors.
+func TestChatError500(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(ErrorResponse{
-			Error: "failed to create session",
+			Error: "engine failure",
 			Code:  "internal",
 		})
 	}))
 	defer srv.Close()
 
 	c := New(WithBaseURL(srv.URL))
-	_, err := c.CreateSession(context.Background(), CreateSessionRequest{Model: "test"})
+	_, err := c.Chat(context.Background(), ChatRequest{Prompt: "hi"})
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

@@ -91,7 +91,7 @@ func (c *Client) ChatStream(ctx context.Context, req ChatRequest) (*StreamReader
 	httpReq.Header.Set("User-Agent", userAgent())
 	c.setAuth(httpReq)
 
-	resp, err := c.doWithRetry(ctx, httpReq, body)
+	resp, err := c.doWithRetry(ctx, httpReq, body, false)
 	if err != nil {
 		return nil, fmt.Errorf("hawk-sdk: stream request: %w", err)
 	}
@@ -104,14 +104,14 @@ func (c *Client) ChatStream(ctx context.Context, req ChatRequest) (*StreamReader
 	return newStreamReader(resp), nil
 }
 
-// Sessions lists all sessions with optional pagination.
-func (c *Client) Sessions(ctx context.Context, opts *ListOptions) (*PaginatedResponse[SessionSummary], error) {
-	params := paginationParams(opts)
-	var resp PaginatedResponse[SessionSummary]
-	if err := c.get(ctx, "/v1/sessions", params, &resp); err != nil {
+// Sessions lists the daemon's active sessions. The daemon returns a plain
+// array with no pagination envelope, so no list options are accepted.
+func (c *Client) Sessions(ctx context.Context) ([]SessionSummary, error) {
+	var resp []SessionSummary
+	if err := c.get(ctx, "/v1/sessions", nil, &resp); err != nil {
 		return nil, err
 	}
-	return &resp, nil
+	return resp, nil
 }
 
 // Session gets a session by ID.
@@ -142,7 +142,8 @@ func (c *Client) DeleteSession(ctx context.Context, id string) error {
 	req.Header.Set("User-Agent", userAgent())
 	c.setAuth(req)
 
-	resp, err := c.doWithRetry(ctx, req, nil)
+	// DELETE is idempotent: safe to retry on any configured status.
+	resp, err := c.doWithRetry(ctx, req, nil, true)
 	if err != nil {
 		return fmt.Errorf("hawk-sdk: delete request: %w", err)
 	}
@@ -166,15 +167,6 @@ func (c *Client) Stats(ctx context.Context) (*StatsResponse, error) {
 	return &resp, nil
 }
 
-// CreateSession creates a new session and returns its summary.
-func (c *Client) CreateSession(ctx context.Context, req CreateSessionRequest) (*SessionSummary, error) {
-	var resp SessionSummary
-	if err := c.post(ctx, "/v1/sessions", req, &resp); err != nil {
-		return nil, err
-	}
-	return &resp, nil
-}
-
 // setAuth sets the Authorization header if an API key is configured.
 func (c *Client) setAuth(req *http.Request) {
 	if c.apiKey != "" {
@@ -182,7 +174,7 @@ func (c *Client) setAuth(req *http.Request) {
 	}
 }
 
-func (c *Client) get(ctx context.Context, path string, params url.Values, out interface{}) error {
+func (c *Client) get(ctx context.Context, path string, params url.Values, out any) error {
 	u := c.baseURL + path
 	if params != nil {
 		u += "?" + params.Encode()
@@ -196,7 +188,8 @@ func (c *Client) get(ctx context.Context, path string, params url.Values, out in
 	req.Header.Set("User-Agent", userAgent())
 	c.setAuth(req)
 
-	resp, err := c.doWithRetry(ctx, req, nil)
+	// GET is idempotent: safe to retry on any configured status.
+	resp, err := c.doWithRetry(ctx, req, nil, true)
 	if err != nil {
 		return fmt.Errorf("hawk-sdk: request failed: %w", err)
 	}
@@ -212,7 +205,7 @@ func (c *Client) get(ctx context.Context, path string, params url.Values, out in
 	return nil
 }
 
-func (c *Client) post(ctx context.Context, path string, body interface{}, out interface{}) error {
+func (c *Client) post(ctx context.Context, path string, body any, out any) error {
 	data, err := json.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("hawk-sdk: marshal body: %w", err)
@@ -227,7 +220,10 @@ func (c *Client) post(ctx context.Context, path string, body interface{}, out in
 	req.Header.Set("User-Agent", userAgent())
 	c.setAuth(req)
 
-	resp, err := c.doWithRetry(ctx, req, data)
+	// POST is not idempotent (currently only used for /v1/chat): a 5xx may
+	// mean the daemon already started processing the request, so only 429
+	// is retried.
+	resp, err := c.doWithRetry(ctx, req, data, false)
 	if err != nil {
 		return fmt.Errorf("hawk-sdk: request failed: %w", err)
 	}
