@@ -52,7 +52,7 @@ hawk-sdk-go/
 
 ## Key Design Decisions
 
-- **Dependency-free:** Zero third-party imports, pure Go standard library
+- **Zero runtime dependencies:** Zero third-party runtime imports, pure Go standard library (build-time `oapi-codegen` tooling is gated behind `//go:build tools` and does not affect the runtime module graph)
 - **Idiomatic Go:** Follows Go conventions, error handling patterns, and naming
 - **Local-only:** Designed for developers running Hawk locally on their machine
 - **Single package:** All exported symbols in the `hawksdk` package
