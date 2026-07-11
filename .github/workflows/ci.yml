@@ -35,6 +35,20 @@ env:
   GO_VERSION: "1.26.5"
 
 jobs:
+  daemon-contract:
+    name: Hawk daemon contract snapshot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Checkout authoritative Hawk contract
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: GrayCodeAI/hawk
+          path: .contract/hawk
+          sparse-checkout: api/openapi.yaml
+      - name: Verify exact contract snapshot
+        run: cmp api/openapi.yaml .contract/hawk/api/openapi.yaml
+
   # -------------------------------------------------------------------------
   # Format + vet — fastest, fail fast.
   # -------------------------------------------------------------------------
