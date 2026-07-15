@@ -41,8 +41,11 @@ type ToolCall struct {
 
 // ToolResult holds the result of executing a tool call.
 type ToolResult struct {
-	// ToolCallID is the ID of the tool call this result corresponds to.
-	ToolCallID string `json:"tool_call_id"`
+	// ToolUseID is the ID of the tool use this result corresponds to.
+	// Hawk's daemon keys tool results by the `tool_use_id` field it emitted
+	// in the assistant's tool_use block (Anthropic/MCP convention), not OpenAI's
+	// `tool_call_id` — the daemon would otherwise drop unmatched results.
+	ToolUseID string `json:"tool_use_id"`
 
 	// Content is the string result from the tool execution.
 	Content string `json:"content"`
@@ -132,7 +135,7 @@ func (c *Client) ChatWithTools(ctx context.Context, req ChatRequest, tools []Too
 			tool, ok := toolMap[tc.Name]
 			if !ok {
 				toolResults = append(toolResults, ToolResult{
-					ToolCallID: tc.ID,
+					ToolUseID: tc.ID,
 					Content:    fmt.Sprintf("error: unknown tool %q", tc.Name),
 					IsError:    true,
 				})
@@ -142,7 +145,7 @@ func (c *Client) ChatWithTools(ctx context.Context, req ChatRequest, tools []Too
 			result, err := tool.Run(ctx, tc.Arguments)
 			if err != nil {
 				toolResults = append(toolResults, ToolResult{
-					ToolCallID: tc.ID,
+					ToolUseID: tc.ID,
 					Content:    fmt.Sprintf("error: %s", err.Error()),
 					IsError:    true,
 				})
@@ -150,7 +153,7 @@ func (c *Client) ChatWithTools(ctx context.Context, req ChatRequest, tools []Too
 			}
 
 			toolResults = append(toolResults, ToolResult{
-				ToolCallID: tc.ID,
+				ToolUseID: tc.ID,
 				Content:    result,
 			})
 		}
