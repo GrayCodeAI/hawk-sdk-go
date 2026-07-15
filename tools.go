@@ -136,8 +136,8 @@ func (c *Client) ChatWithTools(ctx context.Context, req ChatRequest, tools []Too
 			if !ok {
 				toolResults = append(toolResults, ToolResult{
 					ToolUseID: tc.ID,
-					Content:    fmt.Sprintf("error: unknown tool %q", tc.Name),
-					IsError:    true,
+					Content:   fmt.Sprintf("error: unknown tool %q", tc.Name),
+					IsError:   true,
 				})
 				continue
 			}
@@ -146,15 +146,15 @@ func (c *Client) ChatWithTools(ctx context.Context, req ChatRequest, tools []Too
 			if err != nil {
 				toolResults = append(toolResults, ToolResult{
 					ToolUseID: tc.ID,
-					Content:    fmt.Sprintf("error: %s", err.Error()),
-					IsError:    true,
+					Content:   fmt.Sprintf("error: %s", err.Error()),
+					IsError:   true,
 				})
 				continue
 			}
 
 			toolResults = append(toolResults, ToolResult{
 				ToolUseID: tc.ID,
-				Content:    result,
+				Content:   result,
 			})
 		}
 
