@@ -48,8 +48,12 @@ func WithAPIKey(key string) ClientOption {
 // retries with exponential backoff on transient failures.
 func New(opts ...ClientOption) *Client {
 	c := &Client{
-		baseURL:    defaultBaseURL,
-		httpClient: &http.Client{Timeout: 30 * time.Second},
+		baseURL: defaultBaseURL,
+		httpClient: &http.Client{
+			Transport: &http.Transport{
+				ResponseHeaderTimeout: 5 * time.Second,
+			},
+		},
 	}
 	for _, opt := range opts {
 		opt(c)

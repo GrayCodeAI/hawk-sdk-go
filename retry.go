@@ -3,12 +3,26 @@ package hawksdk
 import (
 	"bytes"
 	"context"
+	cryptorand "crypto/rand"
+	"encoding/binary"
 	"io"
 	"math"
 	"math/rand"
 	"net/http"
+	"sync/atomic"
 	"time"
 )
+
+// jitterSeed provides a per-process random seed for jitter, avoiding the
+// global math/rand state which is not safe for concurrent use in some
+// runtimes and can produce predictable sequences.
+var jitterSeed = atomic.Int64{}
+
+func init() {
+	var buf [8]byte
+	_, _ = cryptorand.Read(buf[:])
+	jitterSeed.Store(int64(binary.LittleEndian.Uint64(buf[:])))
+}
 
 // RetryConfig configures the automatic retry behavior for API requests.
 type RetryConfig struct {
@@ -83,7 +97,10 @@ func (cfg *RetryConfig) backoffDuration(attempt int) time.Duration {
 		backoff = float64(cfg.MaxBackoff)
 	}
 	// Full jitter: random value between 0 and calculated backoff.
-	jittered := time.Duration(rand.Float64() * backoff)
+	// Uses a per-process seed to avoid the global math/rand state.
+	seed := jitterSeed.Add(1)
+	rng := rand.New(rand.NewSource(seed))
+	jittered := time.Duration(rng.Float64() * backoff)
 	return jittered
 }
 
