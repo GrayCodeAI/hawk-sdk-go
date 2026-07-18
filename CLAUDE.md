@@ -1,44 +1,5 @@
----
-description: hawk-sdk-go — Go SDK build and test conventions.
-globs: "*.go,*.yaml"
-alwaysApply: false
----
-
-# hawk-sdk-go Conventions
-
-Official Go client for the Hawk daemon API.
-
-## Development workflow
-
-When starting any new work (feature, fix, refactor, chore), always create a feature branch from `main` first. Never commit directly to `main`. Use branch naming conventions like `feat/<description>`, `fix/<description>`, or `chore/<description>`. Open a PR, ensure CI is green, then merge.
-
-## Build & Test
-
-```bash
-go build ./...                    # Build library
-go test ./...                     # Run tests
-go test -race ./...               # Race detector
-go test -coverprofile=c.out ./...  # Coverage
-go vet ./...                      # Static analysis
-gofumpt -w .                      # Format
-go mod tidy                       # Tidy modules
-```
-
-## Design Principles
-
-- Dependency-free: zero third-party runtime imports, pure Go standard library
-- `oapi-codegen` is a build-time tool only (see `codegen_tools.go`)
-- Local-only: designed for developers running Hawk locally
-
-## Ecosystem Boundaries
-
-- Consumer of Hawk public APIs and `hawk-core-contracts`
-- Do not import support engine repos (`eyrie`, `yaad`, `tok`, `trace`, `sight`, `inspect`)
-
-For full hawk-eco extension guidelines, see [hawk/AGENTS.md](https://github.com/GrayCodeAI/hawk/blob/main/AGENTS.md).
-
 <!-- gitnexus:start -->
-## GitNexus — Code Intelligence
+# GitNexus — Code Intelligence
 
 This project is indexed by GitNexus as **hawk-sdk-go** (602 symbols, 1548 relationships, 48 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
